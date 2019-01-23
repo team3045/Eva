@@ -30,10 +30,10 @@ public class Robot extends TimedRobot {
   private Joystick rightStick = new Joystick(1);
   // IMPORTANT: On the real robot, you want to make sure these numbers are correct.
   // You don't want motors on the same side to spin at different speeds or different direction.
-  private WPI_TalonSRX leftMotor1Controller = new WPI_TalonSRX(0);
-  private WPI_TalonSRX leftMotor2Controller = new WPI_TalonSRX(1);
-  private WPI_TalonSRX rightMotor1Controller = new WPI_TalonSRX(2);
-  private WPI_TalonSRX rightMotor2Controller = new WPI_TalonSRX(3);
+  private WPI_TalonSRX leftMotor1Controller = new WPI_TalonSRX(1);
+  private WPI_TalonSRX leftMotor2Controller = new WPI_TalonSRX(2);
+  private WPI_TalonSRX rightMotor1Controller = new WPI_TalonSRX(3);
+  private WPI_TalonSRX rightMotor2Controller = new WPI_TalonSRX(4);
 
   /**\
    * This function is run when the robot is first started up and should be
