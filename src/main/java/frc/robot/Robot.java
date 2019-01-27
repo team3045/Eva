@@ -26,8 +26,8 @@ public class Robot extends TimedRobot {
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
 
-  private Joystick leftStick = new Joystick(1);
-  private Joystick rightStick = new Joystick(2);
+  private Joystick leftStick = new Joystick(0);
+  private Joystick rightStick = new Joystick(1);
   // IMPORTANT: On the real robot, you want to make sure these numbers are correct.
   // You don't want motors on the same side to spin at different speeds or different direction.
   private WPI_TalonSRX leftMotor1Controller = new WPI_TalonSRX(5);
@@ -116,7 +116,7 @@ public class Robot extends TimedRobot {
     double kMaxPower = 0.2;
     // Get the position of each joystick in the vertical (up-down) axiss
     double leftStickPower = kMaxPower * leftStick.getRawAxis(kVerticalAxis);
-    double rightStickPower = kMaxPower * rightStick.getRawAxis(kVerticalAxis);
+    double rightStickPower = -1.0 * kMaxPower * rightStick.getRawAxis(kVerticalAxis);
 
     // Set both left motors to the amount of power on the left stick.
     leftMotor1Controller.set(leftStickPower);
