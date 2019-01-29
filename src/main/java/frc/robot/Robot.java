@@ -12,6 +12,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
+import edu.wpi.first.wpilibj.CameraServer;
+import edu.wpi.cscore.UsbCamera;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -46,6 +48,13 @@ public class Robot extends TimedRobot {
     m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
     m_chooser.addOption("My Auto", kCustomAuto);
     SmartDashboard.putData("Auto choices", m_chooser);
+    UsbCamera cam1 = CameraServer.getInstance().startAutomaticCapture(0);
+    cam1.setResolution(512, 288);
+    cam1.setFPS(8);
+    UsbCamera cam2 = CameraServer.getInstance().startAutomaticCapture(1);
+    cam2.setResolution(512, 288);
+    cam2.setFPS(8);
+
   }
 
   /**
