@@ -14,6 +14,14 @@ import edu.wpi.first.wpilibj.Joystick;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.cscore.UsbCamera;
+import frc.robot.GreenTargetDetector;
+import edu.wpi.first.wpilibj.vision.VisionThread;
+import java.util.ArrayList;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.Rect;
+import org.opencv.imgproc.Imgproc;
+
+
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -39,6 +47,8 @@ public class Robot extends TimedRobot {
   private WPI_TalonSRX rightMotor2Controller = new WPI_TalonSRX(1);
   private WPI_TalonSRX rightMotor3Controller = new WPI_TalonSRX(2);
 
+  private final Object imgLock = new Object();
+
   /**\
    * This function is run when the robot is first started up and should be
    * used for any initialization code.
@@ -54,6 +64,22 @@ public class Robot extends TimedRobot {
     UsbCamera cam2 = CameraServer.getInstance().startAutomaticCapture(1);
     cam2.setResolution(512, 288);
     cam2.setFPS(8);
+    SmartDashboard.putString("Targeting", "Not Targeted");
+    
+    VisionThread visionThread = new VisionThread(cam1, new GreenTargetDetector(), pipeline -> {
+      ArrayList<MatOfPoint> greenRectangles = pipeline.filterContoursOutput();
+      SmartDashboard.putString("Targeting", "Found " + greenRectangles.size() + " rectangles");
+      if (greenRectangles.size() > 1) {
+        Rect r = Imgproc.boundingRect(pipeline.filterContoursOutput().get(0));
+        synchronized (imgLock) {
+          SmartDashboard.putString("Width", ""+r.width);
+          SmartDashboard.putString("Height", ""+r.height);
+        }
+      }
+    });
+  visionThread.start();
+
+
   }
 
   /**

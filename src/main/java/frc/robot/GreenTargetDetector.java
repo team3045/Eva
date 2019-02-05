@@ -27,6 +27,9 @@ import org.opencv.objdetect.*;
 */
 public class GreenTargetDetector implements VisionPipeline {
 
+	private static double SCALING_WIDTH = 0.8;
+	private static double SCALING_HEIGHT = 0.6;
+
 	//Outputs
 	private Mat rgbThresholdOutput = new Mat();
 	private ArrayList<MatOfPoint> findContoursOutput = new ArrayList<MatOfPoint>();
@@ -42,8 +45,8 @@ public class GreenTargetDetector implements VisionPipeline {
 	@Override	public void process(Mat source0) {
 		// Step RGB_Threshold0:
 		Mat rgbThresholdInput = source0;
-		double[] rgbThresholdRed = {0.0, 205.0};
-		double[] rgbThresholdGreen = {250.0, 255.0};
+		double[] rgbThresholdRed = {0.0, 255.0};
+		double[] rgbThresholdGreen = {245.0, 255.0};
 		double[] rgbThresholdBlue = {0.0, 255.0};
 		rgbThreshold(rgbThresholdInput, rgbThresholdRed, rgbThresholdGreen, rgbThresholdBlue, rgbThresholdOutput);
 
@@ -54,14 +57,14 @@ public class GreenTargetDetector implements VisionPipeline {
 
 		// Step Filter_Contours0:
 		ArrayList<MatOfPoint> filterContoursContours = findContoursOutput;
-		double filterContoursMinArea = 2750.0;
+		double filterContoursMinArea = 0.0;
 		double filterContoursMinPerimeter = 0.0;
-		double filterContoursMinWidth = 60.0;
-		double filterContoursMaxWidth = 75.0;
-		double filterContoursMinHeight = 110.0;
-		double filterContoursMaxHeight = 130.0;
-		double[] filterContoursSolidity = {90, 100};
-		double filterContoursMaxVertices = 100.0;
+		double filterContoursMinWidth = 40.0;
+		double filterContoursMaxWidth = 82.0;
+		double filterContoursMinHeight = 100.0;
+		double filterContoursMaxHeight = 145.0;
+		double[] filterContoursSolidity = {90.0, 100};
+		double filterContoursMaxVertices = 1000.0;
 		double filterContoursMinVertices = 0.0;
 		double filterContoursMinRatio = 0.0;
 		double filterContoursMaxRatio = 1000.0;
