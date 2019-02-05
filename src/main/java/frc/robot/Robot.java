@@ -36,18 +36,46 @@ public class Robot extends TimedRobot {
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
 
+  // Joystick setup
   private Joystick leftStick = new Joystick(0);
   private Joystick rightStick = new Joystick(1);
-  // IMPORTANT: On the real robot, you want to make sure these numbers are correct.
-  // You don't want motors on the same side to spin at different speeds or different direction.
-  private WPI_TalonSRX leftMotor1Controller = new WPI_TalonSRX(5);
-  private WPI_TalonSRX leftMotor2Controller = new WPI_TalonSRX(6);
-  private WPI_TalonSRX leftMotor3Controller = new WPI_TalonSRX(7);
-  private WPI_TalonSRX rightMotor1Controller = new WPI_TalonSRX(0);
-  private WPI_TalonSRX rightMotor2Controller = new WPI_TalonSRX(1);
-  private WPI_TalonSRX rightMotor3Controller = new WPI_TalonSRX(2);
 
+  // Talon CAN bus ids
+  private final int kLeftTankMotor1ID = 99;
+  private final int kLeftTankMotor2ID = 99;
+  private final int kRightTankMotor1ID = 99;
+  private final int kRightTankMotor2ID = 99;
+  private final int kFrontLiftMotor1ID = 99;
+  private final int kFrontLiftMotor2ID = 99;
+  private final int kSpiderWheelMotor1ID = 99;
+  private final int kSpiderWheelMotor2ID = 99;
+  private final int kRearLiftMotorID = 99;
+  private final int kArmTiltMotorID = 99;
+  private final int kArmPanMotorID = 99;
+  private final int kArmTelescopeMotorID = 99;
+
+  // Talons
+  private WPI_TalonSRX leftTankMotor1Controller = new WPI_TalonSRX(kLeftTankMotor1ID);
+  private WPI_TalonSRX leftTankMotor2Controller = new WPI_TalonSRX(kLeftTankMotor2ID);
+  private WPI_TalonSRX rightTankMotor1Controller = new WPI_TalonSRX(kRightTankMotor1ID);
+  private WPI_TalonSRX rightTankMotor2Controller = new WPI_TalonSRX(kRightTankMotor2ID);
+  private WPI_TalonSRX frontLiftMotor1Controller = new WPI_TalonSRX(kFrontLiftMotor1ID);
+  private WPI_TalonSRX frontLiftMotor2Controller = new WPI_TalonSRX(kFrontLiftMotor2ID);
+  private WPI_TalonSRX spiderWheelMotor1Controller = new WPI_TalonSRX(kSpiderWheelMotor1ID);
+  private WPI_TalonSRX spiderWheelMotor2Controller = new WPI_TalonSRX(kSpiderWheelMotor2ID);
+  private WPI_TalonSRX rearLiftMotorController = new WPI_TalonSRX(kRearLiftMotorID);
+  private WPI_TalonSRX armTiltMotorController = new WPI_TalonSRX(kArmTiltMotorID);
+  private WPI_TalonSRX armPanMotorController = new WPI_TalonSRX(kArmPanMotorID);
+  private WPI_TalonSRX armTelescopeMotorController = new WPI_TalonSRX(kArmTelescopeMotorID);
+
+  // Solenoids for pneumatics to follow...
+  // No solenoids yet
+
+  // Misc. objects
   private final Object imgLock = new Object();
+
+  // Cap power to a smaller amount for now
+  double kMaxPower = 0.2;
 
   /**\
    * This function is run when the robot is first started up and should be
@@ -77,9 +105,7 @@ public class Robot extends TimedRobot {
         }
       }
     });
-  visionThread.start();
-
-
+    visionThread.start();
   }
 
   /**
@@ -134,6 +160,12 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     tankDrive();
+    frontLift();
+    spiderWheels();
+    rearLift();
+    armTilt();
+    armPan();
+    armTelescope();
   }
 
   /**
@@ -146,19 +178,40 @@ public class Robot extends TimedRobot {
   private void tankDrive() {
     // This assumes the vertical axis is number 1. In reality this depends on the joystick.
     int kVerticalAxis = 1;
-    // Cap power to a smaller amount
-    double kMaxPower = 0.2;
+
     // Get the position of each joystick in the vertical (up-down) axiss
     double leftStickPower = kMaxPower * leftStick.getRawAxis(kVerticalAxis);
     double rightStickPower = -1.0 * kMaxPower * rightStick.getRawAxis(kVerticalAxis);
 
     // Set both left motors to the amount of power on the left stick.
-    leftMotor1Controller.set(leftStickPower);
-    leftMotor2Controller.set(leftStickPower);
-    leftMotor3Controller.set(leftStickPower);
+    leftTankMotor1Controller.set(leftStickPower);
+    leftTankMotor2Controller.set(leftStickPower);
     // Set both right motors to the amount of power on the right stick.
-    rightMotor1Controller.set(rightStickPower);
-    rightMotor2Controller.set(rightStickPower);
-    rightMotor3Controller.set(rightStickPower);
+    rightTankMotor1Controller.set(rightStickPower);
+    rightTankMotor2Controller.set(rightStickPower);
+  }
+
+  private void frontLift() {
+    // Fill in
+  }
+
+  private void spiderWheels() {
+    // Fill in
+  }
+
+  private void rearLift() {
+    // Fill in
+  }
+
+  private void armTilt() {
+    // Fill in
+  }
+
+  private void armPan() {
+    // Fill in
+  }
+
+  private void armTelescope() {
+    // Fill in
   }
 }
