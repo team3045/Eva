@@ -8,9 +8,13 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
+import edu.wpi.first.wpilibj.buttons.JoystickButton;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.Solenoid;
+
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.cscore.UsbCamera;
@@ -20,7 +24,7 @@ import java.util.ArrayList;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
-
+import edu.wpi.first.wpilibj.DoubleSolenoid;
 
 
 /**
@@ -39,6 +43,13 @@ public class Robot extends TimedRobot {
   // Joystick setup
   private Joystick leftStick = new Joystick(0);
   private Joystick rightStick = new Joystick(1);
+  private Joystick operatorStick1 = new Joystick(2);
+  private Joystick operatorStick2 = new Joystick(3);
+
+  // Defines horizontal and vertical axis of joysticks
+  // This assumes the vertical axis is number 1. In reality this depends on the joystick.
+  private final int kHorizontalAxis = 0;
+  private final int kVerticalAxis = 1;
 
   // Talon CAN bus ids
   private final int kLeftTankMotor1ID = 99;
@@ -53,6 +64,7 @@ public class Robot extends TimedRobot {
   private final int kArmTiltMotorID = 99;
   private final int kArmPanMotorID = 99;
   private final int kArmTelescopeMotorID = 99;
+  private final int kPCMID = 21;
 
   // Talons
   private WPI_TalonSRX leftTankMotor1Controller = new WPI_TalonSRX(kLeftTankMotor1ID);
@@ -69,7 +81,7 @@ public class Robot extends TimedRobot {
   private WPI_TalonSRX armTelescopeMotorController = new WPI_TalonSRX(kArmTelescopeMotorID);
 
   // Solenoids for pneumatics to follow...
-  // No solenoids yet
+  private DoubleSolenoid testSolenoid = new DoubleSolenoid(kPCMID,0,1);
 
   // Misc. objects
   private final Object imgLock = new Object();
@@ -106,6 +118,8 @@ public class Robot extends TimedRobot {
       }
     });
     visionThread.start();
+
+    testSolenoid.set(DoubleSolenoid.Value.kReverse);
   }
 
   /**
@@ -166,6 +180,7 @@ public class Robot extends TimedRobot {
     armTilt();
     armPan();
     armTelescope();
+    testSolenoid();
   }
 
   /**
@@ -176,8 +191,7 @@ public class Robot extends TimedRobot {
   }
 
   private void tankDrive() {
-    // This assumes the vertical axis is number 1. In reality this depends on the joystick.
-    int kVerticalAxis = 1;
+
 
     // Get the position of each joystick in the vertical (up-down) axiss
     double leftStickPower = kMaxPower * leftStick.getRawAxis(kVerticalAxis);
@@ -192,26 +206,86 @@ public class Robot extends TimedRobot {
   }
 
   private void frontLift() {
-    // Fill in
+    // if button 1 pressed
+    if (leftStick.getRawButton(6)) {
+      // lift up
+      frontLiftMotor1Controller.set(1*kMaxPower);
+      frontLiftMotor2Controller.set(1*kMaxPower);
+      // else if button 2 pressed
+    } else if (leftStick.getRawButton(7)) {
+      // go down
+      frontLiftMotor1Controller.set(-1*kMaxPower);
+      frontLiftMotor2Controller.set(-1*kMaxPower);
+    } else {
+      // if nothing pressed stop
+      frontLiftMotor1Controller.set(0);
+      frontLiftMotor2Controller.set(0);
+
+    }
   }
 
   private void spiderWheels() {
-    // Fill in
+    // if button pressed
+    if (leftStick.getRawButton(8)) {
+      // spider wheels forward
+      spiderWheelMotor1Controller.set(1*kMaxPower);
+      spiderWheelMotor2Controller.set(1*kMaxPower);
+    } else {
+      // else stop
+      spiderWheelMotor1Controller.set(0);
+      spiderWheelMotor2Controller.set(0);
+    }
   }
 
   private void rearLift() {
-    // Fill in
+    if (rightStick.getRawButton(6)) {
+      // up
+      rearLiftMotorController.set(1*kMaxPower);
+
+    } else if (leftStick.getRawButton(5)) {
+      // down
+      rearLiftMotorController.set(-1*kMaxPower);
+
+    } else {
+      // neither
+      rearLiftMotorController.set(0);
+
+    }
   }
 
   private void armTilt() {
-    // Fill in
+
+    // get where axis is times 20%
+    double operatorStick1PowerVertical = kMaxPower * operatorStick1.getRawAxis(kVerticalAxis);
+    // set power of talon to axis
+    armTiltMotorController.set(operatorStick1PowerVertical);
   }
 
   private void armPan() {
-    // Fill in
+    // get where axis is times 20%
+    double operatorStick1PowerHorizontal = kMaxPower * operatorStick1.getRawAxis(kHorizontalAxis);
+    // set power of talon to axis
+    armPanMotorController.set(operatorStick1PowerHorizontal);
+
   }
 
   private void armTelescope() {
-    // Fill in
+    if(operatorStick1.getRawButton(6)){
+      armTelescopeMotorController.set(1*kMaxPower);
+
+    }else if(operatorStick1.getRawButton(7)){
+      armTelescopeMotorController.set(-1*kMaxPower);
+
+    }else{
+      armTelescopeMotorController.set(0);
+    }
+    
+  }
+  private void testSolenoid(){
+    if(leftStick.getRawButton(1)){
+      testSolenoid.set(DoubleSolenoid.Value.kForward);
+    }else{
+      testSolenoid.set(DoubleSolenoid.Value.kReverse);
+    }
   }
 }
