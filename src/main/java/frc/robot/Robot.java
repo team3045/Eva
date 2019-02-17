@@ -99,10 +99,10 @@ public class Robot extends TimedRobot {
     m_chooser.addOption("My Auto", kCustomAuto);
     SmartDashboard.putData("Auto choices", m_chooser);
     UsbCamera cam1 = CameraServer.getInstance().startAutomaticCapture(0);
-    cam1.setResolution(512, 288);
+    cam1.setResolution(320, 240);
     cam1.setFPS(8);
     UsbCamera cam2 = CameraServer.getInstance().startAutomaticCapture(1);
-    cam2.setResolution(512, 288);
+    cam2.setResolution(320, 240);
     cam2.setFPS(8);
     SmartDashboard.putString("Targeting", "Not Targeted");
     
