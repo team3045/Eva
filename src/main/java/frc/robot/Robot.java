@@ -52,15 +52,15 @@ public class Robot extends TimedRobot {
   private final int kVerticalAxis = 1;
 
   // Talon CAN bus ids
-  private final int kLeftTankMotor1ID = 99;
-  private final int kLeftTankMotor2ID = 99;
-  private final int kRightTankMotor1ID = 99;
-  private final int kRightTankMotor2ID = 99;
-  private final int kFrontLiftMotor1ID = 99;
-  private final int kFrontLiftMotor2ID = 99;
+  private final int kLeftTankMotor1ID = 6;
+  private final int kLeftTankMotor2ID = 7;
+  private final int kRightTankMotor1ID = 0;
+  private final int kRightTankMotor2ID = 1;
+  private final int kFrontLiftMotor1ID = 3;
+  private final int kFrontLiftMotor2ID = 4;
   private final int kSpiderWheelMotor1ID = 99;
   private final int kSpiderWheelMotor2ID = 99;
-  private final int kRearLiftMotorID = 99;
+  private final int kRearLiftMotorID = 5;
   private final int kArmTiltMotorID = 99;
   private final int kArmPanMotorID = 99;
   private final int kArmTelescopeMotorID = 99;
@@ -194,8 +194,8 @@ public class Robot extends TimedRobot {
 
 
     // Get the position of each joystick in the vertical (up-down) axiss
-    double leftStickPower = kMaxPower * leftStick.getRawAxis(kVerticalAxis);
-    double rightStickPower = -1.0 * kMaxPower * rightStick.getRawAxis(kVerticalAxis);
+    double leftStickPower = -1.0 * kMaxPower * leftStick.getRawAxis(kVerticalAxis);
+    double rightStickPower = kMaxPower * rightStick.getRawAxis(kVerticalAxis);
 
     // Set both left motors to the amount of power on the left stick.
     leftTankMotor1Controller.set(leftStickPower);
