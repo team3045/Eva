@@ -57,12 +57,12 @@ public class GreenTargetDetector implements VisionPipeline {
 
 		// Step Filter_Contours0:
 		ArrayList<MatOfPoint> filterContoursContours = findContoursOutput;
-		double filterContoursMinArea = 0.0;
+		double filterContoursMinArea = 1000.0;
 		double filterContoursMinPerimeter = 0.0;
-		double filterContoursMinWidth = 40.0;
-		double filterContoursMaxWidth = 82.0;
-		double filterContoursMinHeight = 100.0;
-		double filterContoursMaxHeight = 145.0;
+		double filterContoursMinWidth = 35.0;
+		double filterContoursMaxWidth = 70.0;
+		double filterContoursMinHeight = 60.0;
+		double filterContoursMaxHeight = 115.0;
 		double[] filterContoursSolidity = {90.0, 100};
 		double filterContoursMaxVertices = 1000.0;
 		double filterContoursMinVertices = 0.0;
