@@ -242,7 +242,7 @@ public class Robot extends TimedRobot {
       // up
       rearLiftMotorController.set(1*kMaxPower);
 
-    } else if (leftStick.getRawButton(5)) {
+    } else if (rightStick.getRawButton(5)) {
       // down
       rearLiftMotorController.set(-1*kMaxPower);
 
