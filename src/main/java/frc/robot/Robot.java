@@ -83,6 +83,7 @@ public class Robot extends TimedRobot {
   // Misc. objects
   private final Object imgLock = new Object();
   private boolean isAutonomousStart = false;
+  private Timer timer = new Timer();
 
   // Cap power to a smaller amount for now
   private final double kMaxPower = 0.2;
@@ -138,6 +139,8 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     isAutonomousStart = true;
+    timer.reset();
+    timer.start();
   }
 
   /**
@@ -145,12 +148,15 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousPeriodic() {
-    if (isAutonomousStart) {
-      isAutonomousStart = false;
+    if (isAutonomousStart && timer.get() < 1.0) {
       // Floor it for a second
       floorIt();
-      Timer.delay(1.0);
     } else {
+      if (isAutonomousStart) {
+        timer.stop();
+        isAutonomousStart = false;
+      }
+
       // Auton and teleop are the same this year
       teleopPeriodic();
     }
