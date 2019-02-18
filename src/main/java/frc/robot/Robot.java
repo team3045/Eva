@@ -14,12 +14,15 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Solenoid;
+import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.CameraServer;
+import edu.wpi.first.wpilibj.vision.VisionThread;
+
 
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
-import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.cscore.UsbCamera;
 import frc.robot.GreenTargetDetector;
-import edu.wpi.first.wpilibj.vision.VisionThread;
 import java.util.ArrayList;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Rect;
@@ -35,16 +38,10 @@ import edu.wpi.first.wpilibj.DoubleSolenoid;
  * project.
  */
 public class Robot extends TimedRobot {
-  private static final String kDefaultAuto = "Default";
-  private static final String kCustomAuto = "My Auto";
-  private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
-
   // Joystick setup
   private Joystick leftStick = new Joystick(0);
   private Joystick rightStick = new Joystick(1);
   private Joystick operatorStick1 = new Joystick(2);
-  private Joystick operatorStick2 = new Joystick(3);
 
   // Defines horizontal and vertical axis of joysticks
   // This assumes the vertical axis is number 1. In reality this depends on the joystick.
@@ -85,9 +82,10 @@ public class Robot extends TimedRobot {
 
   // Misc. objects
   private final Object imgLock = new Object();
+  private boolean isAutonomousStart = false;
 
   // Cap power to a smaller amount for now
-  double kMaxPower = 0.2;
+  private final double kMaxPower = 0.2;
 
   /**\
    * This function is run when the robot is first started up and should be
@@ -95,18 +93,15 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
-    m_chooser.addOption("My Auto", kCustomAuto);
-    SmartDashboard.putData("Auto choices", m_chooser);
-    UsbCamera cam1 = CameraServer.getInstance().startAutomaticCapture(0);
-    cam1.setResolution(320, 240);
-    cam1.setFPS(8);
-    UsbCamera cam2 = CameraServer.getInstance().startAutomaticCapture(1);
-    cam2.setResolution(320, 240);
-    cam2.setFPS(8);
+    UsbCamera frontCamera = CameraServer.getInstance().startAutomaticCapture(0);
+    frontCamera.setResolution(320, 240);
+    frontCamera.setFPS(8);
+    UsbCamera rearCamera = CameraServer.getInstance().startAutomaticCapture(1);
+    rearCamera.setResolution(320, 240);
+    rearCamera.setFPS(8);
     SmartDashboard.putString("Targeting", "Not Targeted");
     
-    VisionThread visionThread = new VisionThread(cam1, new GreenTargetDetector(), pipeline -> {
+    VisionThread visionThread = new VisionThread(frontCamera, new GreenTargetDetector(), pipeline -> {
       ArrayList<MatOfPoint> greenRectangles = pipeline.filterContoursOutput();
       SmartDashboard.putString("Targeting", "Found " + greenRectangles.size() + " rectangles");
       if (greenRectangles.size() > 1) {
@@ -147,9 +142,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
-    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected: " + m_autoSelected);
+    isAutonomousStart = true;
   }
 
   /**
@@ -157,14 +150,14 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousPeriodic() {
-    switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
-        break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
-        break;
+    if (isAutonomousStart) {
+      isAutonomousStart = false;
+      // Floor it for a second
+      floorIt();
+      Timer.delay(1.0);
+    } else {
+      // Auton and teleop are the same this year
+      teleopPeriodic();
     }
   }
 
@@ -191,8 +184,6 @@ public class Robot extends TimedRobot {
   }
 
   private void tankDrive() {
-
-
     // Get the position of each joystick in the vertical (up-down) axiss
     double leftStickPower = -1.0 * kMaxPower * leftStick.getRawAxis(kVerticalAxis);
     double rightStickPower = kMaxPower * rightStick.getRawAxis(kVerticalAxis);
@@ -209,18 +200,17 @@ public class Robot extends TimedRobot {
     // if button 1 pressed
     if (leftStick.getRawButton(6)) {
       // lift up
-      frontLiftMotor1Controller.set(1*kMaxPower);
-      frontLiftMotor2Controller.set(1*kMaxPower);
+      frontLiftMotor1Controller.set(1.0*kMaxPower);
+      frontLiftMotor2Controller.set(1.0*kMaxPower);
       // else if button 2 pressed
     } else if (leftStick.getRawButton(7)) {
       // go down
-      frontLiftMotor1Controller.set(-1*kMaxPower);
-      frontLiftMotor2Controller.set(-1*kMaxPower);
+      frontLiftMotor1Controller.set(-1.0*kMaxPower);
+      frontLiftMotor2Controller.set(-1.0*kMaxPower);
     } else {
       // if nothing pressed stop
       frontLiftMotor1Controller.set(0);
       frontLiftMotor2Controller.set(0);
-
     }
   }
 
@@ -228,8 +218,8 @@ public class Robot extends TimedRobot {
     // if button pressed
     if (leftStick.getRawButton(8)) {
       // spider wheels forward
-      spiderWheelMotor1Controller.set(1*kMaxPower);
-      spiderWheelMotor2Controller.set(1*kMaxPower);
+      spiderWheelMotor1Controller.set(1.0*kMaxPower);
+      spiderWheelMotor2Controller.set(1.0*kMaxPower);
     } else {
       // else stop
       spiderWheelMotor1Controller.set(0);
@@ -240,11 +230,11 @@ public class Robot extends TimedRobot {
   private void rearLift() {
     if (rightStick.getRawButton(6)) {
       // up
-      rearLiftMotorController.set(1*kMaxPower);
+      rearLiftMotorController.set(1.0*kMaxPower);
 
     } else if (rightStick.getRawButton(5)) {
       // down
-      rearLiftMotorController.set(-1*kMaxPower);
+      rearLiftMotorController.set(-1.0*kMaxPower);
 
     } else {
       // neither
@@ -271,10 +261,10 @@ public class Robot extends TimedRobot {
 
   private void armTelescope() {
     if(operatorStick1.getRawButton(6)){
-      armTelescopeMotorController.set(1*kMaxPower);
+      armTelescopeMotorController.set(1.0*kMaxPower);
 
     }else if(operatorStick1.getRawButton(7)){
-      armTelescopeMotorController.set(-1*kMaxPower);
+      armTelescopeMotorController.set(-1.0*kMaxPower);
 
     }else{
       armTelescopeMotorController.set(0);
@@ -287,5 +277,12 @@ public class Robot extends TimedRobot {
     }else{
       testSolenoid.set(DoubleSolenoid.Value.kReverse);
     }
+  }
+
+  private void floorIt() {
+    leftTankMotor1Controller.set(-1.0);
+    leftTankMotor2Controller.set(-1.0);
+    rightTankMotor1Controller.set(1.0);
+    rightTankMotor2Controller.set(1.0);
   }
 }
