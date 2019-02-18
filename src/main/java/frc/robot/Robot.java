@@ -93,6 +93,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    stopRobot();
+  
     UsbCamera frontCamera = CameraServer.getInstance().startAutomaticCapture(0);
     frontCamera.setResolution(320, 240);
     frontCamera.setFPS(8);
@@ -117,16 +119,9 @@ public class Robot extends TimedRobot {
     testSolenoid.set(DoubleSolenoid.Value.kReverse);
   }
 
-  /**
-   * This function is called every robot packet, no matter the mode. Use
-   * this for items like diagnostics that you want ran during disabled,
-   * autonomous, teleoperated and test.
-   *
-   * <p>This runs after the mode specific periodic functions, but before
-   * LiveWindow and SmartDashboard integrated updating.
-   */
   @Override
-  public void robotPeriodic() {
+  public void disabledPeriodic() {
+    stopRobot();
   }
 
   /**
@@ -284,5 +279,20 @@ public class Robot extends TimedRobot {
     leftTankMotor2Controller.set(-1.0);
     rightTankMotor1Controller.set(1.0);
     rightTankMotor2Controller.set(1.0);
+  }
+
+  private void stopRobot() {
+    leftTankMotor1Controller.set(0.0);
+    leftTankMotor2Controller.set(0.0);
+    rightTankMotor1Controller.set(0.0);
+    rightTankMotor2Controller.set(0.0);
+    frontLiftMotor1Controller.set(0.0);
+    frontLiftMotor2Controller.set(0.0);
+    spiderWheelMotor1Controller.set(0.0);
+    spiderWheelMotor2Controller.set(0.0);
+    rearLiftMotorController.set(0.0);
+    armTiltMotorController.set(0.0);
+    armPanMotorController.set(0.0);
+    armTelescopeMotorController.set(0.0);
   }
 }
