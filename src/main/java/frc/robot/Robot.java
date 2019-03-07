@@ -59,7 +59,6 @@ public class Robot extends TimedRobot {
   private final int kSpiderWheelMotor2ID = 99;
   private final int kRearLiftMotorID = 5;
   private final int kArmTiltMotorID = 99;
-  private final int kArmPanMotorID = 99;
   private final int kArmTelescopeMotorID = 99;
   private final int kPCMID = 21;
 
@@ -74,15 +73,31 @@ public class Robot extends TimedRobot {
   private WPI_TalonSRX spiderWheelMotor2Controller = new WPI_TalonSRX(kSpiderWheelMotor2ID);
   private WPI_TalonSRX rearLiftMotorController = new WPI_TalonSRX(kRearLiftMotorID);
   private WPI_TalonSRX armTiltMotorController = new WPI_TalonSRX(kArmTiltMotorID);
-  private WPI_TalonSRX armPanMotorController = new WPI_TalonSRX(kArmPanMotorID);
-  private WPI_TalonSRX armTelescopeMotorController = new WPI_TalonSRX(kArmTelescopeMotorID);
 
   // Solenoids for pneumatics to follow...
-  private DoubleSolenoid testSolenoid = new DoubleSolenoid(kPCMID,0,1);
+  private DoubleSolenoid armShortTelescopeSolenoid = new DoubleSolenoid(kPCMID, 0, 1);
+  private DoubleSolenoid armDeploySolenoid = new DoubleSolenoid(kPCMID, 2, 3);
+  private DoubleSolenoid armLongTelescopeSolenoid = new DoubleSolenoid(kPCMID, 4, 5);
+  private DoubleSolenoid armGrabSolenoid = new DoubleSolenoid(kPCMID, 6, 7);
+  private DoubleSolenoid armPunchSolenoid = new DoubleSolenoid(kPCMID, 8, 9);
+  private Solenoid armUnlockSolenoid = new Solenoid(kPCMID, 10);
 
   // Misc. objects
   private final Object imgLock = new Object();
-  private boolean isAutonomousStart = false;
+  private enum MyRobotState {
+    DISABLED,
+    AUTONOMOUS_BEGIN,
+    AUTONOMOUS_TILT,
+    AUTONOMOUS_TELESCOPE,
+    AUTONOMOUS_DEPLOY,
+    ROBOT_READY,
+    END_BEGIN,
+    END_UNLOCK,
+    END_UNDEPLOY,
+    END_UNTELESCOPE,
+    ROBOT_END,
+  };
+  private MyRobotState robotState = MyRobotState.DISABLED;
   private Timer timer = new Timer();
 
   // Cap power to a smaller amount for now
@@ -117,7 +132,12 @@ public class Robot extends TimedRobot {
     });
     visionThread.start();
 
-    testSolenoid.set(DoubleSolenoid.Value.kReverse);
+    // Set all DoubleSolenoids to STARTING positions. FIXME before competition
+    //armShortTelescopeSolenoid.set(Value.kReverse);
+    //armDeploySolenoid.set(Value.kReverse);
+    //armLongTelescopeSolenoid.set(Value.kReverse);
+    //armGrabSolenoid.set(Value.kReverse);
+    //armPunchSolenoid.set(Value.kReverse);
   }
 
   @Override
@@ -138,9 +158,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
-    isAutonomousStart = true;
-    timer.reset();
-    timer.start();
+    robotState = MyRobotState.AUTONOMOUS_BEGIN;
   }
 
   /**
@@ -148,17 +166,43 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousPeriodic() {
-    if (isAutonomousStart && timer.get() < 1.0) {
-      // Floor it for a second
-      floorIt();
-    } else {
-      if (isAutonomousStart) {
-        timer.stop();
-        isAutonomousStart = false;
-      }
-
-      // Auton and teleop are the same this year
+    if (robotState == MyRobotState.ROBOT_READY) {
+      // If the arm is ready, then simply use human controls.
       teleopPeriodic();
+    } else {
+      // Arm is not ready -- the following method can be used
+      handleAutonomousStateUpdate();
+    }
+  }
+
+  private void handleAutonomousStateUpdate() {
+    if (robotState == MyRobotState.AUTONOMOUS_BEGIN) {
+      timer.reset();
+      timer.start();
+      // Start tilting to level the arm
+      armTiltMotorController.set(kMaxPower);
+      robotState = MyRobotState.AUTONOMOUS_TILT;
+    } else if (robotState == MyRobotState.AUTONOMOUS_TILT) {
+      // We wait .1 second of tilting and assume arm is relatively level
+      if (timer.get() > 0.1) {
+        // Once .1 second has passed, do the next thing
+        timer.stop();
+        armTiltMotorController.set(0.0);
+        robotState = MyRobotState.AUTONOMOUS_TELESCOPE;
+      }
+    } else if (robotState == MyRobotState.AUTONOMOUS_TELESCOPE) {
+      // armShortTelescopeSolenoid.set(Value.kForward);
+      robotState = MyRobotState.AUTONOMOUS_DEPLOY;
+    } else if (robotState == MyRobotState.AUTONOMOUS_DEPLOY) {
+      // armDeploySolenoid.set(Value.kForward);
+      robotState = MyRobotState.ROBOT_READY;
+    } else if (robotState == MyRobotState.ROBOT_READY) {
+      // Everything is already done
+      return;
+    } else {
+      // We have no idea what is happening. Set to AUTONOMOUS_BEGIN and hope that fixes it
+      // This could have the unfortunate effect of causing an infinite loop.
+      robotState = MyRobotState.AUTONOMOUS_BEGIN;
     }
   }
 
@@ -172,9 +216,11 @@ public class Robot extends TimedRobot {
     spiderWheels();
     rearLift();
     armTilt();
-    armPan();
-    armTelescope();
-    testSolenoid();
+    armLongTelescope();
+    armGrab();
+    armPunch();
+    manualDeploy();
+    handleTeleopStateUpdate();
   }
 
   /**
@@ -245,49 +291,49 @@ public class Robot extends TimedRobot {
   }
 
   private void armTilt() {
-
     // get where axis is times 20%
     double operatorStick1PowerVertical = kMaxPower * operatorStick1.getRawAxis(kVerticalAxis);
     // set power of talon to axis
     armTiltMotorController.set(operatorStick1PowerVertical);
   }
 
-  private void armPan() {
-    // get where axis is times 20%
-    double operatorStick1PowerHorizontal = kMaxPower * operatorStick1.getRawAxis(kHorizontalAxis);
-    // set power of talon to axis
-    armPanMotorController.set(operatorStick1PowerHorizontal);
-
-  }
-
-  private void armTelescope() {
+  private void armLongTelescope() {
     if(operatorStick1.getRawButton(6)){
-      armTelescopeMotorController.set(1.0*kMaxPower);
-
+      //armLongTelescopeSolenoid.set(Value.kForward);
     }else if(operatorStick1.getRawButton(7)){
-      armTelescopeMotorController.set(-1.0*kMaxPower);
-
+      //armLongTelescopeSolenoid.set(Value.kReverse);
     }else{
-      armTelescopeMotorController.set(0);
-    }
-    
-  }
-  private void testSolenoid(){
-    if(leftStick.getRawButton(1)){
-      testSolenoid.set(DoubleSolenoid.Value.kForward);
-    }else{
-      testSolenoid.set(DoubleSolenoid.Value.kReverse);
+      // do nothing
     }
   }
 
-  private void floorIt() {
-    leftTankMotor1Controller.set(-1.0);
-    leftTankMotor2Controller.set(-1.0);
-    rightTankMotor1Controller.set(1.0);
-    rightTankMotor2Controller.set(1.0);
+  private void armGrab() {
+    // TODO: fillin
+  }
+
+  private void armPunch() {
+    // TODO: fillin
+  }
+
+  private void manualDeploy() {
+    // controls the things for arm deployment in case of failure of autonomous/end modes
+    if (rightStick.getRawButton(8)) {
+      armShortTelescopeSolenoid.set(Value.kForward);
+    } else if (rightStick.getRawButton(9)) {
+      armShortTelescopeSolenoid.set(Value.kReverse);
+    } else if (rightStick.getRawButton(10)) {
+      armDeploySolenoid.set(Value.kForward);
+    } else if (rightStick.getRawButton(11)) {
+      armDeploySolenoid.set(Value.kReverse);
+    }
+  }
+
+  private void handleTeleopStateUpdate() {
+    // Handle end sequence for robot
   }
 
   private void stopRobot() {
+    robotState = MyRobotState.DISABLED;
     leftTankMotor1Controller.set(0.0);
     leftTankMotor2Controller.set(0.0);
     rightTankMotor1Controller.set(0.0);
@@ -297,8 +343,6 @@ public class Robot extends TimedRobot {
     spiderWheelMotor1Controller.set(0.0);
     spiderWheelMotor2Controller.set(0.0);
     rearLiftMotorController.set(0.0);
-    armTiltMotorController.set(0.0);
-    armPanMotorController.set(0.0);
-    armTelescopeMotorController.set(0.0);
+    armTiltMotorController.set(0.0);     
   }
 }
