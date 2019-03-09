@@ -39,9 +39,10 @@ import edu.wpi.first.wpilibj.DoubleSolenoid;
  */
 public class Robot extends TimedRobot {
   // Joystick setup
-  private Joystick leftStick = new Joystick(0);
-  private Joystick rightStick = new Joystick(1);
-  private Joystick operatorStick1 = new Joystick(2);
+  private Joystick leftDriverStick = new Joystick(0);
+  private Joystick rightDriverStick = new Joystick(1);
+  private Joystick leftOperatorStick = new Joystick(2);
+  private Joystick rightOperatorStick = new Joystick(3);
 
   // Defines horizontal and vertical axis of joysticks
   // This assumes the vertical axis is number 1. In reality this depends on the joystick.
@@ -99,6 +100,7 @@ public class Robot extends TimedRobot {
   };
   private MyRobotState robotState = MyRobotState.DISABLED;
   private Timer timer = new Timer();
+  private boolean isHolding = false;
 
   // Cap power to a smaller amount for now
   private final double kMaxPower = 0.2;
@@ -217,8 +219,7 @@ public class Robot extends TimedRobot {
     rearLift();
     armTilt();
     armLongTelescope();
-    armGrab();
-    armPunch();
+    armGrabAndPunch();
     manualDeploy();
     handleTeleopStateUpdate();
   }
@@ -230,10 +231,13 @@ public class Robot extends TimedRobot {
   public void testPeriodic() {
   }
 
+  /**
+   * Driver sticks only control tank drive
+   */
   private void tankDrive() {
     // Get the position of each joystick in the vertical (up-down) axiss
-    double leftStickPower = -1.0 * kMaxPower * leftStick.getRawAxis(kVerticalAxis);
-    double rightStickPower = kMaxPower * rightStick.getRawAxis(kVerticalAxis);
+    double leftStickPower = -1.0 * kMaxPower * leftDriverStick.getRawAxis(kVerticalAxis);
+    double rightStickPower = kMaxPower * rightDriverStick.getRawAxis(kVerticalAxis);
 
     // Set both left motors to the amount of power on the left stick.
     leftTankMotor1Controller.set(leftStickPower);
@@ -243,30 +247,29 @@ public class Robot extends TimedRobot {
     rightTankMotor2Controller.set(rightStickPower);
   }
 
+  /**
+   * Use left operator stick Y axis for controlling front lift.
+   */
   private void frontLift() {
-    // if button 1 pressed
-    if (leftStick.getRawButton(6)) {
-      // lift up
-      frontLiftMotor1Controller.set(1.0*kMaxPower);
-      frontLiftMotor2Controller.set(1.0*kMaxPower);
-      // else if button 2 pressed
-    } else if (leftStick.getRawButton(7)) {
-      // go down
-      frontLiftMotor1Controller.set(-1.0*kMaxPower);
-      frontLiftMotor2Controller.set(-1.0*kMaxPower);
-    } else {
-      // if nothing pressed stop
-      frontLiftMotor1Controller.set(0);
-      frontLiftMotor2Controller.set(0);
-    }
+    double frontLiftPower = kMaxPower * leftOperatorStick.getRawAxis(kVerticalAxis);
+    frontLiftMotor1Controller.set(frontLiftPower);
+    frontLiftMotor2Controller.set(frontLiftPower);
   }
 
+  /**
+   * Use left operator buttons to control spider wheels:
+   *   * trigger button moves forward
+   *   * right button moves backwards (rarely used)
+   */
   private void spiderWheels() {
-    // if button pressed
-    if (leftStick.getRawButton(8)) {
+    // if trigger button pressed
+    if (leftOperatorStick.getRawButton(1)) {
       // spider wheels forward
       spiderWheelMotor1Controller.set(1.0*kMaxPower);
       spiderWheelMotor2Controller.set(1.0*kMaxPower);
+    } else if (leftOperatorStick.getRawButton(5)) {
+      spiderWheelMotor1Controller.set(-1.0*kMaxPower);
+      spiderWheelMotor2Controller.set(-1.0*kMaxPower);
     } else {
       // else stop
       spiderWheelMotor1Controller.set(0);
@@ -274,62 +277,93 @@ public class Robot extends TimedRobot {
     }
   }
 
+  /**
+   * Use either left or right operator stick buttons to control rear lift
+   *   * center button lifts (foot goes down, robot goes up)
+   *   * back button descends (foot goes up, robot goes down)
+   */
   private void rearLift() {
-    if (rightStick.getRawButton(6)) {
-      // up
+    if (leftOperatorStick.getRawButton(3) || rightOperatorStick.getRawButton(3)) {
+      // lift
       rearLiftMotorController.set(1.0*kMaxPower);
-
-    } else if (rightStick.getRawButton(5)) {
-      // down
+    } else if (leftOperatorStick.getRawButton(2) || rightOperatorStick.getRawButton(2)) {
+      // descend
       rearLiftMotorController.set(-1.0*kMaxPower);
-
     } else {
       // neither
       rearLiftMotorController.set(0);
-
     }
   }
 
+  /**
+   * Use right operator stick Y axis for controlling arm tilt.
+   */
   private void armTilt() {
     // get where axis is times 20%
-    double operatorStick1PowerVertical = kMaxPower * operatorStick1.getRawAxis(kVerticalAxis);
+    double armLiftPower = kMaxPower * rightOperatorStick.getRawAxis(kVerticalAxis);
+ 
+    // TODO: prevent moving beyond 45deg tilt using switch
+ 
     // set power of talon to axis
-    armTiltMotorController.set(operatorStick1PowerVertical);
+    armTiltMotorController.set(armLiftPower);
   }
 
+  /**
+   * Use right operator buttons to control extension
+   *   * left button to extend
+   *   * right button to retract
+   */
   private void armLongTelescope() {
-    if(operatorStick1.getRawButton(6)){
+    if(rightOperatorStick.getRawButton(4)){
+      // extend
       //armLongTelescopeSolenoid.set(Value.kForward);
-    }else if(operatorStick1.getRawButton(7)){
+    }else if(rightOperatorStick.getRawButton(5)){
+      // retract
       //armLongTelescopeSolenoid.set(Value.kReverse);
     }else{
       // do nothing
     }
   }
 
-  private void armGrab() {
-    // TODO: fillin
-  }
-
-  private void armPunch() {
-    // TODO: fillin
+  /**
+   * Use right operator stick trigger button for grab/punch.
+   * 
+   * Operator holds button to hold ball
+   * When ball released, then punch
+   */
+  private void armGrabAndPunch() {
+    if (rightOperatorStick.getRawButton(1)) {
+      // armGrabSolenoid.set(Value.kForward);
+    } else if (isHolding) {
+      // armGrabSolenoid.set(Value.kReverse);
+      // armPunchSolenoid.set(Value.kForward);
+      isHolding = false;
+    } else {
+      // armGrabSolenoid.set(Value.kReverse);
+      // armPunchSolenoid.set(Value.kReverse);
+    }
   }
 
   private void manualDeploy() {
     // controls the things for arm deployment in case of failure of autonomous/end modes
-    if (rightStick.getRawButton(8)) {
+    if (leftOperatorStick.getRawButton(8)) {
       armShortTelescopeSolenoid.set(Value.kForward);
-    } else if (rightStick.getRawButton(9)) {
+    } else if (leftOperatorStick.getRawButton(9)) {
       armShortTelescopeSolenoid.set(Value.kReverse);
-    } else if (rightStick.getRawButton(10)) {
+    }
+    if (leftOperatorStick.getRawButton(10)) {
       armDeploySolenoid.set(Value.kForward);
-    } else if (rightStick.getRawButton(11)) {
+    } else if (leftOperatorStick.getRawButton(11)) {
       armDeploySolenoid.set(Value.kReverse);
     }
   }
 
   private void handleTeleopStateUpdate() {
     // Handle end sequence for robot
+    // Start with how to start sequence -- press bottom button on rightOperatorStick
+    if (rightOperatorStick.getRawButton(6)) {
+      robotState = MyRobotState.END_BEGIN;
+    } // else if  (...) chain TODO
   }
 
   private void stopRobot() {
@@ -343,6 +377,7 @@ public class Robot extends TimedRobot {
     spiderWheelMotor1Controller.set(0.0);
     spiderWheelMotor2Controller.set(0.0);
     rearLiftMotorController.set(0.0);
-    armTiltMotorController.set(0.0);     
+    armTiltMotorController.set(0.0);
+    isHolding = false;    
   }
 }
