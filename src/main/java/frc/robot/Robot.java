@@ -90,7 +90,6 @@ public class Robot extends TimedRobot {
     AUTONOMOUS_BEGIN,
     AUTONOMOUS_TILT,
     AUTONOMOUS_TELESCOPE,
-    AUTONOMOUS_DEPLOY,
     ROBOT_READY,
     END_BEGIN,
     END_UNLOCK,
@@ -169,10 +168,10 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousPeriodic() {
     if (robotState == MyRobotState.ROBOT_READY) {
-      // If the arm is ready, then simply use human controls.
+      // If the robot is ready, then simply use human controls.
       teleopPeriodic();
     } else {
-      // Arm is not ready -- the following method can be used
+      // Robot is not ready -- the following method can be used
       handleAutonomousStateUpdate();
     }
   }
@@ -194,9 +193,6 @@ public class Robot extends TimedRobot {
       }
     } else if (robotState == MyRobotState.AUTONOMOUS_TELESCOPE) {
       // armShortTelescopeSolenoid.set(Value.kForward);
-      robotState = MyRobotState.AUTONOMOUS_DEPLOY;
-    } else if (robotState == MyRobotState.AUTONOMOUS_DEPLOY) {
-      // armDeploySolenoid.set(Value.kForward);
       robotState = MyRobotState.ROBOT_READY;
     } else if (robotState == MyRobotState.ROBOT_READY) {
       // Everything is already done
