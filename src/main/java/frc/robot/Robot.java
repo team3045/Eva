@@ -18,6 +18,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.vision.VisionThread;
+import edu.wpi.first.wpilibj.DigitalInput;
 
 
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
@@ -100,6 +101,8 @@ public class Robot extends TimedRobot {
   private MyRobotState robotState = MyRobotState.DISABLED;
   private Timer timer = new Timer();
   private boolean isHolding = false;
+  private DigitalInput tiltLimiter = new DigitalInput(0);
+  private boolean isTiltLimited = false;
 
   // Cap power to a smaller amount for now
   private final double kMaxPower = 0.2;
@@ -300,7 +303,11 @@ public class Robot extends TimedRobot {
     // get where axis is times 20%
     double armLiftPower = kMaxPower * rightOperatorStick.getRawAxis(kVerticalAxis);
  
-    // TODO: prevent moving beyond 45deg tilt using switch
+    // Limit tilt via switch -- don't allow operator to go beyond stop
+    if (tiltLimiter.get() || isTiltLimited) {
+      armLiftPower = Math.min(0.0, armLiftPower);
+      isTiltLimited = armLiftPower > 0.0;
+    }
  
     // set power of talon to axis
     armTiltMotorController.set(armLiftPower);
