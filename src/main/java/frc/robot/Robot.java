@@ -219,7 +219,9 @@ public class Robot extends TimedRobot {
     rearLift();
     armTilt();
     armLongTelescope();
-    armGrabAndPunch();
+    armGrab();
+    armPunch();
+    armDeploy();
     manualDeploy();
     handleTeleopStateUpdate();
   }
@@ -258,16 +260,16 @@ public class Robot extends TimedRobot {
 
   /**
    * Use left operator buttons to control spider wheels:
-   *   * trigger button moves forward
-   *   * right button moves backwards (rarely used)
+   *   * bottom right top button moves forward
+   *   * bottom right bottom button moves backwards (rarely used)
    */
   private void spiderWheels() {
-    // if trigger button pressed
-    if (leftOperatorStick.getRawButton(1)) {
+    if (leftOperatorStick.getRawButton(11)) {
       // spider wheels forward
       spiderWheelMotor1Controller.set(1.0*kMaxPower);
       spiderWheelMotor2Controller.set(1.0*kMaxPower);
-    } else if (leftOperatorStick.getRawButton(5)) {
+    } else if (leftOperatorStick.getRawButton(10)) {
+      // spider wheels backward
       spiderWheelMotor1Controller.set(-1.0*kMaxPower);
       spiderWheelMotor2Controller.set(-1.0*kMaxPower);
     } else {
@@ -326,42 +328,58 @@ public class Robot extends TimedRobot {
   }
 
   /**
-   * Use right operator stick trigger button for grab/punch.
-   * 
+   * Use right operator stick trigger button for grab.
    * Operator holds button to hold ball
-   * When ball released, then punch
    */
-  private void armGrabAndPunch() {
+  private void armGrab() {
     if (rightOperatorStick.getRawButton(1)) {
       // armGrabSolenoid.set(Value.kForward);
-    } else if (isHolding) {
-      // armGrabSolenoid.set(Value.kReverse);
-      // armPunchSolenoid.set(Value.kForward);
-      isHolding = false;
     } else {
       // armGrabSolenoid.set(Value.kReverse);
+    }
+  }
+
+  /**
+   * Use left operator stick trigger button to punch.
+   */
+  private void armPunch() {
+    if (leftOperatorStick.getRawButton(1)) {
+      // armPunchSolenoid.set(Value.kForward);
+    } else {
       // armPunchSolenoid.set(Value.kReverse);
     }
   }
 
+  /**
+   * Use right operator bottom left top button to deploy arm
+   */
+  private void armDeploy() {
+    if (rightOperatorStick.getRawButton(6)) {
+      // armDeploySolenoid.set(Value.kForward);
+    }
+  }
+
+  /**
+   * Not for normal use.
+   * Controls arm deployment in case of failure of autonomous/end modes.
+   */
   private void manualDeploy() {
-    // controls the things for arm deployment in case of failure of autonomous/end modes
-    if (leftOperatorStick.getRawButton(8)) {
+    if (rightOperatorStick.getRawButton(8)) {
       armShortTelescopeSolenoid.set(Value.kForward);
-    } else if (leftOperatorStick.getRawButton(9)) {
+    } else if (rightOperatorStick.getRawButton(9)) {
       armShortTelescopeSolenoid.set(Value.kReverse);
     }
-    if (leftOperatorStick.getRawButton(10)) {
+    if (rightOperatorStick.getRawButton(11)) {
       armDeploySolenoid.set(Value.kForward);
-    } else if (leftOperatorStick.getRawButton(11)) {
+    } else if (rightOperatorStick.getRawButton(10)) {
       armDeploySolenoid.set(Value.kReverse);
     }
   }
 
   private void handleTeleopStateUpdate() {
     // Handle end sequence for robot
-    // Start with how to start sequence -- press bottom button on rightOperatorStick
-    if (rightOperatorStick.getRawButton(6)) {
+    // Start with how to start sequence -- press bottom left lower button on rightOperatorStick
+    if (rightOperatorStick.getRawButton(7)) {
       robotState = MyRobotState.END_BEGIN;
     } // else if  (...) chain TODO
   }
