@@ -51,18 +51,18 @@ public class Robot extends TimedRobot {
   private final int kVerticalAxis = 1;
 
   // Talon CAN bus ids
-  private final int kLeftTankMotor1ID = 6;
-  private final int kLeftTankMotor2ID = 7;
-  private final int kRightTankMotor1ID = 0;
-  private final int kRightTankMotor2ID = 1;
-  private final int kFrontLiftMotor1ID = 3;
-  private final int kFrontLiftMotor2ID = 4;
-  private final int kSpiderWheelMotor1ID = 99;
-  private final int kSpiderWheelMotor2ID = 99;
-  private final int kRearLiftMotorID = 5;
-  private final int kArmTiltMotorID = 99;
-  private final int kArmTelescopeMotorID = 99;
-  private final int kPCMID = 21;
+  private final int kLeftTankMotor1ID = 10;
+  private final int kLeftTankMotor2ID = 11;
+  private final int kRightTankMotor1ID = 12;
+  private final int kRightTankMotor2ID = 13;
+  private final int kFrontLiftMotor1ID = 14;
+  private final int kFrontLiftMotor2ID = 15;
+  private final int kSpiderWheelMotor1ID = 16;
+  private final int kSpiderWheelMotor2ID = 17;
+  private final int kRearLiftMotorID = 18;
+  private final int kArmTiltMotorID = 19;
+  private final int kPCM1ID = 21;
+  private final int kPCM2ID = 22;
 
   // Talons
   private WPI_TalonSRX leftTankMotor1Controller = new WPI_TalonSRX(kLeftTankMotor1ID);
@@ -77,12 +77,12 @@ public class Robot extends TimedRobot {
   private WPI_TalonSRX armTiltMotorController = new WPI_TalonSRX(kArmTiltMotorID);
 
   // Solenoids for pneumatics to follow...
-  private DoubleSolenoid armShortTelescopeSolenoid = new DoubleSolenoid(kPCMID, 0, 1);
-  private DoubleSolenoid armDeploySolenoid = new DoubleSolenoid(kPCMID, 2, 3);
-  private DoubleSolenoid armLongTelescopeSolenoid = new DoubleSolenoid(kPCMID, 4, 5);
-  private DoubleSolenoid armGrabSolenoid = new DoubleSolenoid(kPCMID, 6, 7);
-  private DoubleSolenoid armPunchSolenoid = new DoubleSolenoid(kPCMID, 8, 9);
-  private Solenoid armUnlockSolenoid = new Solenoid(kPCMID, 10);
+  private DoubleSolenoid armShortTelescopeSolenoid = new DoubleSolenoid(kPCM1ID, 0, 1);
+  private DoubleSolenoid armDeploySolenoid = new DoubleSolenoid(kPCM1ID, 2, 3);
+  private DoubleSolenoid armLongTelescopeSolenoid = new DoubleSolenoid(kPCM1ID, 4, 5);
+  private DoubleSolenoid armGrabSolenoid = new DoubleSolenoid(kPCM2ID, 0, 1);
+  private DoubleSolenoid armPunchSolenoid = new DoubleSolenoid(kPCM2ID, 2, 3);
+  private Solenoid armUnlockSolenoid = new Solenoid(kPCM2ID, 4);
 
   // Misc. objects
   private final Object imgLock = new Object();
@@ -252,7 +252,8 @@ public class Robot extends TimedRobot {
    * Use left operator stick Y axis for controlling front lift.
    */
   private void frontLift() {
-    double frontLiftPower = kMaxPower * leftOperatorStick.getRawAxis(kVerticalAxis);
+    double kFrontLiftMaxPower = 0.5; // more power for lift
+    double frontLiftPower = kFrontLiftMaxPower * leftOperatorStick.getRawAxis(kVerticalAxis);
     frontLiftMotor1Controller.set(frontLiftPower);
     frontLiftMotor2Controller.set(frontLiftPower);
   }
@@ -266,11 +267,11 @@ public class Robot extends TimedRobot {
     if (leftOperatorStick.getRawButton(11)) {
       // spider wheels forward
       spiderWheelMotor1Controller.set(1.0*kMaxPower);
-      spiderWheelMotor2Controller.set(1.0*kMaxPower);
+      spiderWheelMotor2Controller.set(-1.0*kMaxPower);
     } else if (leftOperatorStick.getRawButton(10)) {
       // spider wheels backward
       spiderWheelMotor1Controller.set(-1.0*kMaxPower);
-      spiderWheelMotor2Controller.set(-1.0*kMaxPower);
+      spiderWheelMotor2Controller.set(1.0*kMaxPower);
     } else {
       // else stop
       spiderWheelMotor1Controller.set(0);
@@ -286,10 +287,10 @@ public class Robot extends TimedRobot {
   private void rearLift() {
     if (leftOperatorStick.getRawButton(3) || rightOperatorStick.getRawButton(3)) {
       // lift
-      rearLiftMotorController.set(1.0*kMaxPower);
+      rearLiftMotorController.set(-1.0*kMaxPower);
     } else if (leftOperatorStick.getRawButton(2) || rightOperatorStick.getRawButton(2)) {
       // descend
-      rearLiftMotorController.set(-1.0*kMaxPower);
+      rearLiftMotorController.set(1.0*kMaxPower);
     } else {
       // neither
       rearLiftMotorController.set(0);
@@ -300,14 +301,14 @@ public class Robot extends TimedRobot {
    * Use right operator stick Y axis for controlling arm tilt.
    */
   private void armTilt() {
-    // get where axis is times 20%
     double armLiftPower = kMaxPower * rightOperatorStick.getRawAxis(kVerticalAxis);
  
     // Limit tilt via switch -- don't allow operator to go beyond stop
-    if (tiltLimiter.get() || isTiltLimited) {
-      armLiftPower = Math.min(0.0, armLiftPower);
-      isTiltLimited = armLiftPower > 0.0;
-    }
+    // FIXME: not  working
+    //if (tiltLimiter.get() || isTiltLimited) {
+    //  armLiftPower = Math.min(0.0, armLiftPower);
+    //  isTiltLimited = armLiftPower > 0.0;
+    //}
  
     // set power of talon to axis
     armTiltMotorController.set(armLiftPower);
