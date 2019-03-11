@@ -107,6 +107,10 @@ public class Robot extends TimedRobot {
   // Cap power to a smaller amount for now
   private final double kMaxPower = 0.2;
 
+  private final int CAMERA_WIDTH = 320;
+  private final int CAMERA_CENTER = CAMERA_WIDTH / 2;
+  private final int CAMERA_HEIGHT = 240;
+
   /**\
    * This function is run when the robot is first started up and should be
    * used for any initialization code.
@@ -116,21 +120,35 @@ public class Robot extends TimedRobot {
     stopRobot();
   
     UsbCamera frontCamera = CameraServer.getInstance().startAutomaticCapture(0);
-    frontCamera.setResolution(320, 240);
+    frontCamera.setResolution(CAMERA_WIDTH, CAMERA_HEIGHT);
     frontCamera.setFPS(8);
     UsbCamera rearCamera = CameraServer.getInstance().startAutomaticCapture(1);
-    rearCamera.setResolution(320, 240);
+    rearCamera.setResolution(CAMERA_WIDTH, CAMERA_HEIGHT);
     rearCamera.setFPS(8);
-    SmartDashboard.putString("Targeting", "Not Targeted");
+    SmartDashboard.putString("Targeting", "No");
     
     VisionThread visionThread = new VisionThread(frontCamera, new GreenTargetDetector(), pipeline -> {
       ArrayList<MatOfPoint> greenRectangles = pipeline.filterContoursOutput();
-      SmartDashboard.putString("Targeting", "Found " + greenRectangles.size() + " rectangles");
-      if (greenRectangles.size() > 1) {
-        Rect r = Imgproc.boundingRect(pipeline.filterContoursOutput().get(0));
+      if (greenRectangles.size() == 2) {
+        int center1, center2;
         synchronized (imgLock) {
-          SmartDashboard.putString("Width", ""+r.width);
-          SmartDashboard.putString("Height", ""+r.height);
+          if (greenRectangles.size() != 2) {
+            return;
+          }
+          Rect r1 = Imgproc.boundingRect(greenRectangles.get(0));
+          Rect r2 = Imgproc.boundingRect(greenRectangles.get(1));
+          if (r1 == null || r2 == null) {
+            return;
+          }
+          center1 = r1.x + (r1.width / 2);
+          center2 = r2.x + (r2.width / 2);
+        }
+        int dist1 = Math.abs(CAMERA_CENTER - center1);
+        int dist2 = Math.abs(CAMERA_CENTER - center2);
+        if (Math.abs(dist1-dist2) > 10) {
+          SmartDashboard.putString("Targeting", "No");
+        } else {
+          SmartDashboard.putString("Targeting", "Centered");
         }
       }
     });
