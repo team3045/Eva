@@ -77,11 +77,11 @@ public class Robot extends TimedRobot {
   private WPI_TalonSRX armTiltMotorController = new WPI_TalonSRX(kArmTiltMotorID);
 
   // Solenoids for pneumatics to follow...
+  private Solenoid armGrabSolenoid = new Solenoid(kPCM2ID, 0);
+  private Solenoid armPunchSolenoid = new Solenoid(kPCM2ID, 1);
   private DoubleSolenoid armShortTelescopeSolenoid = new DoubleSolenoid(kPCM1ID, 0, 1);
   private DoubleSolenoid armDeploySolenoid = new DoubleSolenoid(kPCM1ID, 2, 3);
   private DoubleSolenoid armLongTelescopeSolenoid = new DoubleSolenoid(kPCM1ID, 4, 5);
-  private DoubleSolenoid armGrabSolenoid = new DoubleSolenoid(kPCM2ID, 0, 1);
-  private DoubleSolenoid armPunchSolenoid = new DoubleSolenoid(kPCM2ID, 2, 3);
   private Solenoid armUnlockSolenoid = new Solenoid(kPCM2ID, 4);
 
   // Misc. objects
@@ -100,7 +100,6 @@ public class Robot extends TimedRobot {
   };
   private MyRobotState robotState = MyRobotState.DISABLED;
   private Timer timer = new Timer();
-  private boolean isHolding = false;
   private DigitalInput tiltLimiter = new DigitalInput(0);
   private boolean isTiltLimited = false;
 
@@ -127,7 +126,7 @@ public class Robot extends TimedRobot {
     rearCamera.setFPS(8);
     SmartDashboard.putString("Targeting", "No");
     
-    VisionThread visionThread = new VisionThread(frontCamera, new GreenTargetDetector(), pipeline -> {
+    VisionThread visionThread = new VisionThread(rearCamera, new GreenTargetDetector(), pipeline -> {
       ArrayList<MatOfPoint> greenRectangles = pipeline.filterContoursOutput();
       if (greenRectangles.size() == 2) {
         int center1, center2;
@@ -145,7 +144,7 @@ public class Robot extends TimedRobot {
         }
         int dist1 = Math.abs(CAMERA_CENTER - center1);
         int dist2 = Math.abs(CAMERA_CENTER - center2);
-        if (Math.abs(dist1-dist2) > 10) {
+        if (Math.abs(dist1-dist2) > 15) {
           SmartDashboard.putString("Targeting", "No");
         } else {
           SmartDashboard.putString("Targeting", "Centered");
@@ -158,8 +157,6 @@ public class Robot extends TimedRobot {
     //armShortTelescopeSolenoid.set(Value.kReverse);
     //armDeploySolenoid.set(Value.kReverse);
     //armLongTelescopeSolenoid.set(Value.kReverse);
-    //armGrabSolenoid.set(Value.kReverse);
-    //armPunchSolenoid.set(Value.kReverse);
   }
 
   @Override
@@ -254,9 +251,10 @@ public class Robot extends TimedRobot {
    * Driver sticks only control tank drive
    */
   private void tankDrive() {
+    double kTankDriveMaxPower = 0.7;
     // Get the position of each joystick in the vertical (up-down) axiss
-    double leftStickPower = -1.0 * kMaxPower * leftDriverStick.getRawAxis(kVerticalAxis);
-    double rightStickPower = kMaxPower * rightDriverStick.getRawAxis(kVerticalAxis);
+    double leftStickPower = -1.0 * kTankDriveMaxPower * smoothen(leftDriverStick.getRawAxis(kVerticalAxis));
+    double rightStickPower = kTankDriveMaxPower * smoothen(rightDriverStick.getRawAxis(kVerticalAxis));
 
     // Set both left motors to the amount of power on the left stick.
     leftTankMotor1Controller.set(leftStickPower);
@@ -264,6 +262,10 @@ public class Robot extends TimedRobot {
     // Set both right motors to the amount of power on the right stick.
     rightTankMotor1Controller.set(rightStickPower);
     rightTankMotor2Controller.set(rightStickPower);
+  }
+
+  private static double smoothen(double input) {
+    return (input < 0.0 ? -1.0 : 1.0) * Math.pow(input, 2);
   }
 
   /**
@@ -354,22 +356,14 @@ public class Robot extends TimedRobot {
    * Operator holds button to hold ball
    */
   private void armGrab() {
-    if (rightOperatorStick.getRawButton(1)) {
-      // armGrabSolenoid.set(Value.kForward);
-    } else {
-      // armGrabSolenoid.set(Value.kReverse);
-    }
+    armGrabSolenoid.set(rightOperatorStick.getRawButton(1));
   }
 
   /**
    * Use left operator stick trigger button to punch.
    */
   private void armPunch() {
-    if (leftOperatorStick.getRawButton(1)) {
-      // armPunchSolenoid.set(Value.kForward);
-    } else {
-      // armPunchSolenoid.set(Value.kReverse);
-    }
+    armPunchSolenoid.set(leftOperatorStick.getRawButton(1));
   }
 
   /**
@@ -408,6 +402,7 @@ public class Robot extends TimedRobot {
 
   private void stopRobot() {
     robotState = MyRobotState.DISABLED;
+
     leftTankMotor1Controller.set(0.0);
     leftTankMotor2Controller.set(0.0);
     rightTankMotor1Controller.set(0.0);
@@ -418,6 +413,8 @@ public class Robot extends TimedRobot {
     spiderWheelMotor2Controller.set(0.0);
     rearLiftMotorController.set(0.0);
     armTiltMotorController.set(0.0);
-    isHolding = false;    
+
+    armGrabSolenoid.set(false);
+    armPunchSolenoid.set(false);
   }
 }
