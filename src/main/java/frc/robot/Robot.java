@@ -79,9 +79,9 @@ public class Robot extends TimedRobot {
   // Solenoids for pneumatics to follow...
   private Solenoid armGrabSolenoid = new Solenoid(kPCM2ID, 0);
   private Solenoid armPunchSolenoid = new Solenoid(kPCM2ID, 1);
-  private DoubleSolenoid armShortTelescopeSolenoid = new DoubleSolenoid(kPCM1ID, 0, 1);
+  private Solenoid armShortTelescopeSolenoid = new Solenoid(kPCM2ID, 2);
+  private DoubleSolenoid armLongTelescopeSolenoid = new DoubleSolenoid(kPCM1ID, 0, 1);
   private DoubleSolenoid armDeploySolenoid = new DoubleSolenoid(kPCM1ID, 2, 3);
-  private DoubleSolenoid armLongTelescopeSolenoid = new DoubleSolenoid(kPCM1ID, 4, 5);
   private Solenoid armUnlockSolenoid = new Solenoid(kPCM2ID, 4);
 
   // Misc. objects
@@ -142,21 +142,34 @@ public class Robot extends TimedRobot {
           center1 = r1.x + (r1.width / 2);
           center2 = r2.x + (r2.width / 2);
         }
+        if (center1 > center2) {
+          int temp;
+          temp = center2;
+          center2 = center1;
+          center1 = temp;
+        }
         int dist1 = Math.abs(CAMERA_CENTER - center1);
         int dist2 = Math.abs(CAMERA_CENTER - center2);
-        if (Math.abs(dist1-dist2) > 15) {
-          SmartDashboard.putString("Targeting", "No");
-        } else {
+        boolean isCentered = Math.abs(dist1-dist2) <= 15;
+        if (isCentered) {
           SmartDashboard.putString("Targeting", "Centered");
+        } else if (dist1 > dist2) {
+          SmartDashboard.putString("Targeting", "Go Left");
+        } else {
+          SmartDashboard.putString("Targeting", "Go Right");
         }
+      } else {
+        SmartDashboard.putString("Targeting", "No");
       }
     });
     visionThread.start();
 
     // Set all DoubleSolenoids to STARTING positions. FIXME before competition
-    //armShortTelescopeSolenoid.set(Value.kReverse);
+    armGrabSolenoid.set(false);
+    armPunchSolenoid.set(false);
+    armShortTelescopeSolenoid.set(false);
+    armLongTelescopeSolenoid.set(Value.kReverse);
     //armDeploySolenoid.set(Value.kReverse);
-    //armLongTelescopeSolenoid.set(Value.kReverse);
   }
 
   @Override
@@ -199,18 +212,18 @@ public class Robot extends TimedRobot {
       timer.reset();
       timer.start();
       // Start tilting to level the arm
-      armTiltMotorController.set(kMaxPower);
+      armTiltMotorController.set(-0.5);
       robotState = MyRobotState.AUTONOMOUS_TILT;
     } else if (robotState == MyRobotState.AUTONOMOUS_TILT) {
       // We wait .1 second of tilting and assume arm is relatively level
-      if (timer.get() > 0.1) {
+      if (timer.get() > 0.5) {
         // Once .1 second has passed, do the next thing
         timer.stop();
         armTiltMotorController.set(0.0);
         robotState = MyRobotState.AUTONOMOUS_TELESCOPE;
       }
     } else if (robotState == MyRobotState.AUTONOMOUS_TELESCOPE) {
-      // armShortTelescopeSolenoid.set(Value.kForward);
+      armShortTelescopeSolenoid.set(true);
       robotState = MyRobotState.ROBOT_READY;
     } else if (robotState == MyRobotState.ROBOT_READY) {
       // Everything is already done
@@ -272,8 +285,8 @@ public class Robot extends TimedRobot {
    * Use left operator stick Y axis for controlling front lift.
    */
   private void frontLift() {
-    double kFrontLiftMaxPower = 0.5; // more power for lift
-    double frontLiftPower = kFrontLiftMaxPower * leftOperatorStick.getRawAxis(kVerticalAxis);
+    double frontLiftPower = -1.0 * smoothen(smoothen(smoothen(leftOperatorStick.getRawAxis(kVerticalAxis))));
+    frontLiftPower = Math.max(frontLiftPower, -0.33);
     frontLiftMotor1Controller.set(frontLiftPower);
     frontLiftMotor2Controller.set(frontLiftPower);
   }
@@ -284,14 +297,15 @@ public class Robot extends TimedRobot {
    *   * bottom right bottom button moves backwards (rarely used)
    */
   private void spiderWheels() {
+    double kSpiderWheelsMaxPower = 0.5;
     if (leftOperatorStick.getRawButton(11)) {
       // spider wheels forward
-      spiderWheelMotor1Controller.set(1.0*kMaxPower);
-      spiderWheelMotor2Controller.set(-1.0*kMaxPower);
+      spiderWheelMotor1Controller.set(1.0*kSpiderWheelsMaxPower);
+      spiderWheelMotor2Controller.set(1.0*kSpiderWheelsMaxPower);
     } else if (leftOperatorStick.getRawButton(10)) {
       // spider wheels backward
-      spiderWheelMotor1Controller.set(-1.0*kMaxPower);
-      spiderWheelMotor2Controller.set(1.0*kMaxPower);
+      spiderWheelMotor1Controller.set(-1.0*kSpiderWheelsMaxPower);
+      spiderWheelMotor2Controller.set(-1.0*kSpiderWheelsMaxPower);
     } else {
       // else stop
       spiderWheelMotor1Controller.set(0);
@@ -305,12 +319,13 @@ public class Robot extends TimedRobot {
    *   * back button descends (foot goes up, robot goes down)
    */
   private void rearLift() {
+    double kRearLiftMaxPower = 0.5;
     if (leftOperatorStick.getRawButton(3) || rightOperatorStick.getRawButton(3)) {
       // lift
-      rearLiftMotorController.set(-1.0*kMaxPower);
+      rearLiftMotorController.set(-1.0*kRearLiftMaxPower);
     } else if (leftOperatorStick.getRawButton(2) || rightOperatorStick.getRawButton(2)) {
       // descend
-      rearLiftMotorController.set(1.0*kMaxPower);
+      rearLiftMotorController.set(1.0*kRearLiftMaxPower);
     } else {
       // neither
       rearLiftMotorController.set(0);
@@ -321,10 +336,12 @@ public class Robot extends TimedRobot {
    * Use right operator stick Y axis for controlling arm tilt.
    */
   private void armTilt() {
-    double armLiftPower = kMaxPower * rightOperatorStick.getRawAxis(kVerticalAxis);
- 
+    double kArmTiltMaxPower = 1.0;
+    double armLiftPower = kArmTiltMaxPower * smoothen(smoothen(rightOperatorStick.getRawAxis(kVerticalAxis)));
+    armLiftPower = Math.min(armLiftPower, 0.5);
+
     // Limit tilt via switch -- don't allow operator to go beyond stop
-    // FIXME: not  working
+    // FIXME: not working
     //if (tiltLimiter.get() || isTiltLimited) {
     //  armLiftPower = Math.min(0.0, armLiftPower);
     //  isTiltLimited = armLiftPower > 0.0;
@@ -342,10 +359,10 @@ public class Robot extends TimedRobot {
   private void armLongTelescope() {
     if(rightOperatorStick.getRawButton(4)){
       // extend
-      //armLongTelescopeSolenoid.set(Value.kForward);
+      armLongTelescopeSolenoid.set(Value.kForward);
     }else if(rightOperatorStick.getRawButton(5)){
       // retract
-      //armLongTelescopeSolenoid.set(Value.kReverse);
+      armLongTelescopeSolenoid.set(Value.kReverse);
     }else{
       // do nothing
     }
@@ -381,9 +398,9 @@ public class Robot extends TimedRobot {
    */
   private void manualDeploy() {
     if (rightOperatorStick.getRawButton(8)) {
-      armShortTelescopeSolenoid.set(Value.kForward);
+      armShortTelescopeSolenoid.set(true);
     } else if (rightOperatorStick.getRawButton(9)) {
-      armShortTelescopeSolenoid.set(Value.kReverse);
+      armShortTelescopeSolenoid.set(false);
     }
     if (rightOperatorStick.getRawButton(11)) {
       armDeploySolenoid.set(Value.kForward);
