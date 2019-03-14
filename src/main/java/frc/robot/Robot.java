@@ -283,8 +283,13 @@ public class Robot extends TimedRobot {
    * Use left operator stick Y axis for controlling front lift.
    */
   private void frontLift() {
-    double frontLiftPower = -1.0 * smoothen(smoothen(smoothen(leftOperatorStick.getRawAxis(kVerticalAxis))));
-    frontLiftPower = Math.max(frontLiftPower, -0.33);
+    double frontLiftPower;
+    double amt = leftOperatorStick.getRawAxis(kVerticalAxis);
+    if (amt < 0.0) {
+      frontLiftPower = -1.0 * smoothen(smoothen(amt));
+    } else {
+      frontLiftPower = -1.0 * amt * 0.33;
+    }
     frontLiftMotor1Controller.set(frontLiftPower);
     frontLiftMotor2Controller.set(frontLiftPower);
   }
@@ -335,7 +340,7 @@ public class Robot extends TimedRobot {
    */
   private void armTilt() {
     double kArmTiltMaxPower = 1.0;
-    double armLiftPower = kArmTiltMaxPower * smoothen(smoothen(rightOperatorStick.getRawAxis(kVerticalAxis)));
+    double armLiftPower = kArmTiltMaxPower * smoothen(rightOperatorStick.getRawAxis(kVerticalAxis));
     armLiftPower = Math.min(armLiftPower, 0.5);
 
     // Limit tilt via switch -- don't allow operator to go beyond stop
