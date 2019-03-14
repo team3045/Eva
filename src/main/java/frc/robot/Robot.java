@@ -81,8 +81,7 @@ public class Robot extends TimedRobot {
   private Solenoid armPunchSolenoid = new Solenoid(kPCM2ID, 1);
   private Solenoid armShortTelescopeSolenoid = new Solenoid(kPCM2ID, 2);
   private DoubleSolenoid armLongTelescopeSolenoid = new DoubleSolenoid(kPCM1ID, 0, 1);
-  private DoubleSolenoid armDeploySolenoid = new DoubleSolenoid(kPCM1ID, 2, 3);
-  private Solenoid armUnlockSolenoid = new Solenoid(kPCM2ID, 4);
+  private DoubleSolenoid armDeploySolenoid = new DoubleSolenoid(kPCM1ID, 3, 2);
 
   // Misc. objects
   private final Object imgLock = new Object();
@@ -169,7 +168,7 @@ public class Robot extends TimedRobot {
     armPunchSolenoid.set(false);
     armShortTelescopeSolenoid.set(false);
     armLongTelescopeSolenoid.set(Value.kReverse);
-    //armDeploySolenoid.set(Value.kReverse);
+    armDeploySolenoid.set(Value.kReverse);
   }
 
   @Override
@@ -250,7 +249,6 @@ public class Robot extends TimedRobot {
     armPunch();
     armDeploy();
     manualDeploy();
-    handleTeleopStateUpdate();
   }
 
   /**
@@ -388,7 +386,11 @@ public class Robot extends TimedRobot {
    */
   private void armDeploy() {
     if (rightOperatorStick.getRawButton(6)) {
-      // armDeploySolenoid.set(Value.kForward);
+      // deploy
+      armDeploySolenoid.set(Value.kForward);
+    } else if (rightOperatorStick.getRawButton(7)) {
+      // undeploy
+      armDeploySolenoid.set(Value.kReverse);
     }
   }
 
@@ -402,19 +404,6 @@ public class Robot extends TimedRobot {
     } else if (rightOperatorStick.getRawButton(9)) {
       armShortTelescopeSolenoid.set(false);
     }
-    if (rightOperatorStick.getRawButton(11)) {
-      armDeploySolenoid.set(Value.kForward);
-    } else if (rightOperatorStick.getRawButton(10)) {
-      armDeploySolenoid.set(Value.kReverse);
-    }
-  }
-
-  private void handleTeleopStateUpdate() {
-    // Handle end sequence for robot
-    // Start with how to start sequence -- press bottom left lower button on rightOperatorStick
-    if (rightOperatorStick.getRawButton(7)) {
-      robotState = MyRobotState.END_BEGIN;
-    } // else if  (...) chain TODO
   }
 
   private void stopRobot() {
