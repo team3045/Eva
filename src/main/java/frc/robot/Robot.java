@@ -286,12 +286,12 @@ public class Robot extends TimedRobot {
     double frontLiftPower;
     double amt = leftOperatorStick.getRawAxis(kVerticalAxis);
     if (amt < 0.0) {
-      frontLiftPower = -1.0 * smoothen(smoothen(amt));
+      frontLiftPower = -1.0 * smoothen(smoothen(smoothen(amt)));
     } else {
-      frontLiftPower = -1.0 * amt * 0.33;
+      frontLiftPower = -1.0 * amt * 0.30;
     }
     frontLiftMotor1Controller.set(frontLiftPower);
-    frontLiftMotor2Controller.set(frontLiftPower);
+    frontLiftMotor2Controller.set(-1.0 * frontLiftPower);
   }
 
   /**
