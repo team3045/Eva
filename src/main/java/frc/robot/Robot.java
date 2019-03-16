@@ -262,7 +262,11 @@ public class Robot extends TimedRobot {
    * Driver sticks only control tank drive
    */
   private void tankDrive() {
-    double kTankDriveMaxPower = 0.7;
+    double kTankDriveMaxPower = 0.5;
+    // if both triggers pushed, then allow full power
+    if (leftDriverStick.getRawButton(1) && rightDriverStick.getRawButton(1)) {
+      kTankDriveMaxPower = 1.0;
+    }
     // Get the position of each joystick in the vertical (up-down) axiss
     double leftStickPower = -1.0 * kTankDriveMaxPower * smoothen(leftDriverStick.getRawAxis(kVerticalAxis));
     double rightStickPower = kTankDriveMaxPower * smoothen(rightDriverStick.getRawAxis(kVerticalAxis));
@@ -288,7 +292,7 @@ public class Robot extends TimedRobot {
     if (amt < 0.0) {
       frontLiftPower = -1.0 * smoothen(smoothen(smoothen(amt)));
     } else {
-      frontLiftPower = -1.0 * amt * 0.30;
+      frontLiftPower = -1.0 * amt * 0.33;
     }
     frontLiftMotor1Controller.set(frontLiftPower);
     frontLiftMotor2Controller.set(-1.0 * frontLiftPower);
@@ -342,13 +346,6 @@ public class Robot extends TimedRobot {
     double kArmTiltMaxPower = 1.0;
     double armLiftPower = kArmTiltMaxPower * smoothen(rightOperatorStick.getRawAxis(kVerticalAxis));
     armLiftPower = Math.min(armLiftPower, 0.5);
-
-    // Limit tilt via switch -- don't allow operator to go beyond stop
-    // FIXME: not working
-    //if (tiltLimiter.get() || isTiltLimited) {
-    //  armLiftPower = Math.min(0.0, armLiftPower);
-    //  isTiltLimited = armLiftPower > 0.0;
-    //}
  
     // set power of talon to axis
     armTiltMotorController.set(armLiftPower);
@@ -393,7 +390,7 @@ public class Robot extends TimedRobot {
     if (rightOperatorStick.getRawButton(6)) {
       // deploy
       armDeploySolenoid.set(Value.kForward);
-    } else if (rightOperatorStick.getRawButton(7)) {
+    } else {
       // undeploy
       armDeploySolenoid.set(Value.kReverse);
     }
