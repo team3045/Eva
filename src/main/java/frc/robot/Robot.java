@@ -198,13 +198,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousPeriodic() {
-    if (robotState == MyRobotState.ROBOT_READY) {
-      // If the robot is ready, then simply use human controls.
-      teleopPeriodic();
-    } else {
-      // Robot is not ready -- the following method can be used
-      handleAutonomousStateUpdate();
-    }
+    teleopPeriodic();
   }
 
   private void handleAutonomousStateUpdate() {
@@ -244,12 +238,12 @@ public class Robot extends TimedRobot {
     tankDrive();
     spiderWheels();
     rearLift();
-    armTilt();
-    armLongTelescope();
-    armGrab();
-    armPunch();
-    armDeploy();
-    manualDeploy();
+    //armTilt();
+    //armLongTelescope();
+    //armGrab();
+    //armPunch();
+    //armDeploy();
+    //manualDeploy();
   }
 
   /**
