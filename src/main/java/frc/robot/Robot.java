@@ -101,6 +101,7 @@ public class Robot extends TimedRobot {
   private Timer timer = new Timer();
   private DigitalInput tiltLimiter = new DigitalInput(0);
   private boolean isTiltLimited = false;
+  private boolean isClimbing = false;
 
   // Cap power to a smaller amount for now
   private final double kMaxPower = 0.2;
@@ -239,8 +240,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void teleopPeriodic() {
-    tankDrive();
     frontLift();
+    tankDrive();
     spiderWheels();
     rearLift();
     armTilt();
@@ -262,14 +263,18 @@ public class Robot extends TimedRobot {
    * Driver sticks only control tank drive
    */
   private void tankDrive() {
-    double kTankDriveMaxPower = 0.5;
-    // if both triggers pushed, then allow full power
-    if (leftDriverStick.getRawButton(1) && rightDriverStick.getRawButton(1)) {
-      kTankDriveMaxPower = 1.0;
-    }
+    double kTankDriveMaxPower = 0.675;
     // Get the position of each joystick in the vertical (up-down) axiss
-    double leftStickPower = -1.0 * kTankDriveMaxPower * smoothen(leftDriverStick.getRawAxis(kVerticalAxis));
-    double rightStickPower = kTankDriveMaxPower * smoothen(rightDriverStick.getRawAxis(kVerticalAxis));
+    double leftStickPower = -1.0 * (leftDriverStick.getRawButton(1) ? 1.0 : kTankDriveMaxPower) * smoothen(leftDriverStick.getRawAxis(kVerticalAxis));
+    double rightStickPower = (rightDriverStick.getRawButton(1) ? 1.0 : kTankDriveMaxPower) * smoothen(rightDriverStick.getRawAxis(kVerticalAxis));
+
+    if (isClimbing && timer.get() < 0.15 && leftStickPower < 0.0 && rightStickPower > 0.0) {
+      leftTankMotor1Controller.set(0.0);
+      leftTankMotor2Controller.set(0.0);
+      rightTankMotor1Controller.set(0.0);
+      rightTankMotor2Controller.set(0.0);
+      return;
+    }
 
     // Set both left motors to the amount of power on the left stick.
     leftTankMotor1Controller.set(leftStickPower);
@@ -290,9 +295,24 @@ public class Robot extends TimedRobot {
     double frontLiftPower;
     double amt = leftOperatorStick.getRawAxis(kVerticalAxis);
     if (amt < 0.0) {
-      frontLiftPower = -1.0 * smoothen(smoothen(smoothen(amt)));
+      double newAmt = smoothen(smoothen(amt));
+      boolean newIsClimbing = newAmt < -0.15;
+      if (newIsClimbing && !isClimbing) {
+        timer.reset();
+        timer.start();
+      }
+
+      frontLiftPower = -1.0 * newAmt;
+
+      isClimbing = newIsClimbing;
+      if (isClimbing && timer.get() < 0.15) {
+        frontLiftPower = Math.min(frontLiftPower, 0.30);
+      } else if (isClimbing && timer.get() < 0.30) {
+        frontLiftPower = Math.min(frontLiftPower, 0.15);
+      }
     } else {
       frontLiftPower = -1.0 * amt * 0.33;
+      isClimbing = false;
     }
     frontLiftMotor1Controller.set(frontLiftPower);
     frontLiftMotor2Controller.set(-1.0 * frontLiftPower);
@@ -305,11 +325,11 @@ public class Robot extends TimedRobot {
    */
   private void spiderWheels() {
     double kSpiderWheelsMaxPower = 0.5;
-    if (leftOperatorStick.getRawButton(11)) {
+    if (leftOperatorStick.getRawButton(2)) {
       // spider wheels forward
       spiderWheelMotor1Controller.set(1.0*kSpiderWheelsMaxPower);
       spiderWheelMotor2Controller.set(1.0*kSpiderWheelsMaxPower);
-    } else if (leftOperatorStick.getRawButton(10)) {
+    } else if (leftOperatorStick.getRawButton(11)) {
       // spider wheels backward
       spiderWheelMotor1Controller.set(-1.0*kSpiderWheelsMaxPower);
       spiderWheelMotor2Controller.set(-1.0*kSpiderWheelsMaxPower);
@@ -330,7 +350,7 @@ public class Robot extends TimedRobot {
     if (leftOperatorStick.getRawButton(3) || rightOperatorStick.getRawButton(3)) {
       // lift
       rearLiftMotorController.set(-1.0*kRearLiftMaxPower);
-    } else if (leftOperatorStick.getRawButton(2) || rightOperatorStick.getRawButton(2)) {
+    } else if (leftOperatorStick.getRawButton(4) || rightOperatorStick.getRawButton(2)) {
       // descend
       rearLiftMotorController.set(1.0*kRearLiftMaxPower);
     } else {
@@ -387,7 +407,7 @@ public class Robot extends TimedRobot {
    * Use right operator bottom left top button to deploy arm
    */
   private void armDeploy() {
-    if (rightOperatorStick.getRawButton(6)) {
+    if (rightOperatorStick.getRawButton(6) || rightOperatorStick.getRawButton(7)) {
       // deploy
       armDeploySolenoid.set(Value.kForward);
     } else {
@@ -424,5 +444,7 @@ public class Robot extends TimedRobot {
 
     armGrabSolenoid.set(false);
     armPunchSolenoid.set(false);
+
+    isClimbing = false;
   }
 }
