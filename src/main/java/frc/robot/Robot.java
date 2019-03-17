@@ -257,7 +257,7 @@ public class Robot extends TimedRobot {
    * Driver sticks only control tank drive
    */
   private void tankDrive() {
-    double kTankDriveMaxPower = 0.675;
+    double kTankDriveMaxPower = 1.0;
     // Get the position of each joystick in the vertical (up-down) axiss
     double leftStickPower = -1.0 * (leftDriverStick.getRawButton(1) ? 1.0 : kTankDriveMaxPower) * smoothen(leftDriverStick.getRawAxis(kVerticalAxis));
     double rightStickPower = (rightDriverStick.getRawButton(1) ? 1.0 : kTankDriveMaxPower) * smoothen(rightDriverStick.getRawAxis(kVerticalAxis));
