@@ -235,6 +235,7 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     frontLift();
+    tankDriveSingleJoystick();
     tankDrive();
     spiderWheels();
     rearLift();
@@ -276,6 +277,42 @@ public class Robot extends TimedRobot {
     // Set both right motors to the amount of power on the right stick.
     rightTankMotor1Controller.set(rightStickPower);
     rightTankMotor2Controller.set(rightStickPower);
+  }
+
+  private void tankDriveSingleJoystick() {
+    double smoothenX = smoothen(rightOperatorStick.getRawAxis(kHorizontalAxis));
+    double smoothenY = smoothen(rightOperatorStick.getRawAxis(kVerticalAxis));
+
+    double leftMotorPower = 0.0;
+    double rightMotorPower = 0.0;
+
+    if (smoothenX < 0.0) {
+      leftMotorPower -= smoothenX;
+      rightMotorPower += smoothenX;
+    } else {
+      leftMotorPower += smoothenX;
+      rightMotorPower -= smoothenX;
+    }
+
+    leftMotorPower -= smoothenY * (smoothenX > 0.0 ? Math.abs(smoothenX) : 0.0);
+    rightMotorPower -= smoothenY * (smoothenX < 0.0 ? Math.abs(smoothenX) : 0.0);
+
+    if (leftMotorPower < -1.0) {
+      leftMotorPower = -1.0;
+    } else if (leftMotorPower > 1.0) {
+      leftMotorPower = 1.0;
+    }
+
+    if (rightMotorPower < -1.0) {
+      rightMotorPower = -1.0;
+    } else if (rightMotorPower > 1.0) {
+      rightMotorPower = 1.0;
+    }
+
+    leftTankMotor1Controller.set(-1.0 *leftMotorPower);
+    leftTankMotor2Controller.set(-1.0 *leftMotorPower);
+    rightTankMotor1Controller.set(rightMotorPower);
+    rightTankMotor2Controller.set(rightMotorPower);
   }
 
   private static double smoothen(double input) {
