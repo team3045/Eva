@@ -103,6 +103,11 @@ public class Robot extends TimedRobot {
   private boolean isTiltLimited = false;
   private boolean isClimbing = false;
 
+  private static final String kDefaultControls = "Twin Joysticks";
+  private static final String kSingleControls = "Single Joystick";
+  private String m_autoSelected;
+  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+
   // Cap power to a smaller amount for now
   private final double kMaxPower = 0.2;
 
@@ -170,6 +175,11 @@ public class Robot extends TimedRobot {
     armShortTelescopeSolenoid.set(false);
     armLongTelescopeSolenoid.set(Value.kReverse);
     armDeploySolenoid.set(Value.kReverse);
+
+    // Two kinds of controls
+    m_chooser.setDefaultOption("Twin Joysticks", kDefaultControls);
+    m_chooser.addOption("Single Joystick", kSingleControls);
+    SmartDashboard.putData("Controls", m_chooser);
   }
 
   @Override
@@ -235,8 +245,11 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     frontLift();
-    tankDriveSingleJoystick();
-    tankDrive();
+    if (m_chooser.getSelected() == kSingleControls) {
+      tankDriveSingleJoystick();
+    } else {
+      tankDrive();
+    }
     spiderWheels();
     rearLift();
     //armTilt();
@@ -287,15 +300,15 @@ public class Robot extends TimedRobot {
     double rightMotorPower = 0.0;
 
     if (smoothenX < 0.0) {
-      leftMotorPower -= smoothenX;
-      rightMotorPower += smoothenX;
-    } else {
       leftMotorPower += smoothenX;
       rightMotorPower -= smoothenX;
+    } else {
+      leftMotorPower -= smoothenX;
+      rightMotorPower += smoothenX;
     }
 
-    leftMotorPower -= smoothenY * (smoothenX > 0.0 ? Math.abs(smoothenX) : 0.0);
-    rightMotorPower -= smoothenY * (smoothenX < 0.0 ? Math.abs(smoothenX) : 0.0);
+    leftMotorPower += smoothenY;
+    rightMotorPower += smoothenY;
 
     if (leftMotorPower < -1.0) {
       leftMotorPower = -1.0;
@@ -309,8 +322,8 @@ public class Robot extends TimedRobot {
       rightMotorPower = 1.0;
     }
 
-    leftTankMotor1Controller.set(-1.0 *leftMotorPower);
-    leftTankMotor2Controller.set(-1.0 *leftMotorPower);
+    leftTankMotor1Controller.set(-1.0 * leftMotorPower);
+    leftTankMotor2Controller.set(-1.0 * leftMotorPower);
     rightTankMotor1Controller.set(rightMotorPower);
     rightTankMotor2Controller.set(rightMotorPower);
   }
