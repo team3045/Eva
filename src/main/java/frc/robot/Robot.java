@@ -19,7 +19,8 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.vision.VisionThread;
 import edu.wpi.first.wpilibj.DigitalInput;
-
+import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.SpeedControllerGroup;
 
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import edu.wpi.cscore.UsbCamera;
@@ -28,7 +29,8 @@ import java.util.ArrayList;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
-import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+
 
 
 /**
@@ -76,6 +78,10 @@ public class Robot extends TimedRobot {
   private WPI_TalonSRX rearLiftMotorController = new WPI_TalonSRX(kRearLiftMotorID);
   private WPI_TalonSRX armTiltMotorController = new WPI_TalonSRX(kArmTiltMotorID);
 
+  private SpeedControllerGroup leftDriveGroup = new SpeedControllerGroup(leftTankMotor1Controller, leftTankMotor2Controller);
+  private SpeedControllerGroup rightDriveGroup = new SpeedControllerGroup(rightTankMotor1Controller, rightTankMotor2Controller);
+  private DifferentialDrive myDrive = new DifferentialDrive(leftDriveGroup, rightDriveGroup);
+
   // Solenoids for pneumatics to follow...
   private Solenoid armGrabSolenoid = new Solenoid(kPCM2ID, 0);
   private Solenoid armPunchSolenoid = new Solenoid(kPCM2ID, 1);
@@ -103,13 +109,10 @@ public class Robot extends TimedRobot {
   private boolean isTiltLimited = false;
   private boolean isClimbing = false;
 
-  private static final String kDefaultControls = "Twin Joysticks";
-  private static final String kSingleControls = "Single Joystick";
-  private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
-
-  // Cap power to a smaller amount for now
-  private final double kMaxPower = 0.2;
+  private static final String kTankDrive = "Tank Drive";
+  private static final String kArcadeDrive = "Arcade Drive";
+  private static final String kCheesyDrive = "Cheesy Drive";
+  private final SendableChooser<String> chooser = new SendableChooser<>();
 
   private final int CAMERA_WIDTH = 320;
   private final int CAMERA_CENTER = CAMERA_WIDTH / 2;
@@ -121,16 +124,20 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    leftDriveGroup.setInverted(true);
+    rightDriveGroup.setInverted(true);
+
     stopRobot();
-  
+
     UsbCamera frontCamera = CameraServer.getInstance().startAutomaticCapture(0);
     frontCamera.setResolution(CAMERA_WIDTH, CAMERA_HEIGHT);
-    frontCamera.setFPS(8);
+    frontCamera.setFPS(4);
     UsbCamera rearCamera = CameraServer.getInstance().startAutomaticCapture(1);
     rearCamera.setResolution(CAMERA_WIDTH, CAMERA_HEIGHT);
-    rearCamera.setFPS(8);
+    rearCamera.setFPS(4);
     SmartDashboard.putString("Targeting", "No");
-    
+
+    /*
     VisionThread visionThread = new VisionThread(rearCamera, new GreenTargetDetector(), pipeline -> {
       ArrayList<MatOfPoint> greenRectangles = pipeline.filterContoursOutput();
       if (greenRectangles.size() == 2) {
@@ -168,7 +175,8 @@ public class Robot extends TimedRobot {
       }
     });
     visionThread.start();
-
+    */
+  
     // Set all DoubleSolenoids to STARTING positions. FIXME before competition
     armGrabSolenoid.set(false);
     armPunchSolenoid.set(false);
@@ -177,9 +185,10 @@ public class Robot extends TimedRobot {
     armDeploySolenoid.set(Value.kReverse);
 
     // Two kinds of controls
-    m_chooser.setDefaultOption("Twin Joysticks", kDefaultControls);
-    m_chooser.addOption("Single Joystick", kSingleControls);
-    SmartDashboard.putData("Controls", m_chooser);
+    chooser.setDefaultOption("Tank Drive", kTankDrive);
+    chooser.addOption("Arcade Drive", kArcadeDrive);
+    chooser.addOption("Cheesy Drive", kCheesyDrive);
+    SmartDashboard.putData("Drive", chooser);
   }
 
   @Override
@@ -244,12 +253,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void teleopPeriodic() {
+    tankDrive();
     frontLift();
-    if (m_chooser.getSelected() == kSingleControls) {
-      tankDriveSingleJoystick();
-    } else {
-      tankDrive();
-    }
     spiderWheels();
     rearLift();
     //armTilt();
@@ -271,61 +276,14 @@ public class Robot extends TimedRobot {
    * Driver sticks only control tank drive
    */
   private void tankDrive() {
-    double kTankDriveMaxPower = 1.0;
-    // Get the position of each joystick in the vertical (up-down) axiss
-    double leftStickPower = -1.0 * (leftDriverStick.getRawButton(1) ? 1.0 : kTankDriveMaxPower) * smoothen(leftDriverStick.getRawAxis(kVerticalAxis));
-    double rightStickPower = (rightDriverStick.getRawButton(1) ? 1.0 : kTankDriveMaxPower) * smoothen(rightDriverStick.getRawAxis(kVerticalAxis));
-
-    if (isClimbing && timer.get() < 0.15 && leftStickPower < 0.0 && rightStickPower > 0.0) {
-      leftTankMotor1Controller.set(0.0);
-      leftTankMotor2Controller.set(0.0);
-      rightTankMotor1Controller.set(0.0);
-      rightTankMotor2Controller.set(0.0);
-      return;
+    String selectedDrive = chooser.getSelected();
+    if (selectedDrive == kArcadeDrive) {
+      myDrive.arcadeDrive(rightDriverStick.getRawAxis(kVerticalAxis), -1.0 * rightDriverStick.getRawAxis(kHorizontalAxis));
+    } else if (selectedDrive == kCheesyDrive) {
+      myDrive.curvatureDrive(rightDriverStick.getRawAxis(kVerticalAxis), -1.0 * rightDriverStick.getRawAxis(kHorizontalAxis), rightDriverStick.getRawButton(1));
+    } else { // Tank Drive
+      myDrive.tankDrive(leftDriverStick.getRawAxis(kVerticalAxis), rightDriverStick.getRawAxis(kVerticalAxis));
     }
-
-    // Set both left motors to the amount of power on the left stick.
-    leftTankMotor1Controller.set(leftStickPower);
-    leftTankMotor2Controller.set(leftStickPower);
-    // Set both right motors to the amount of power on the right stick.
-    rightTankMotor1Controller.set(rightStickPower);
-    rightTankMotor2Controller.set(rightStickPower);
-  }
-
-  private void tankDriveSingleJoystick() {
-    double smoothenX = smoothen(rightOperatorStick.getRawAxis(kHorizontalAxis));
-    double smoothenY = smoothen(rightOperatorStick.getRawAxis(kVerticalAxis));
-
-    double leftMotorPower = 0.0;
-    double rightMotorPower = 0.0;
-
-    if (smoothenX < 0.0) {
-      leftMotorPower += smoothenX;
-      rightMotorPower -= smoothenX;
-    } else {
-      leftMotorPower -= smoothenX;
-      rightMotorPower += smoothenX;
-    }
-
-    leftMotorPower += smoothenY;
-    rightMotorPower += smoothenY;
-
-    if (leftMotorPower < -1.0) {
-      leftMotorPower = -1.0;
-    } else if (leftMotorPower > 1.0) {
-      leftMotorPower = 1.0;
-    }
-
-    if (rightMotorPower < -1.0) {
-      rightMotorPower = -1.0;
-    } else if (rightMotorPower > 1.0) {
-      rightMotorPower = 1.0;
-    }
-
-    leftTankMotor1Controller.set(-1.0 * leftMotorPower);
-    leftTankMotor2Controller.set(-1.0 * leftMotorPower);
-    rightTankMotor1Controller.set(rightMotorPower);
-    rightTankMotor2Controller.set(rightMotorPower);
   }
 
   private static double smoothen(double input) {
