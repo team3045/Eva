@@ -114,9 +114,9 @@ public class Robot extends TimedRobot {
   private static final String kCheesyDrive = "Cheesy Drive";
   private final SendableChooser<String> chooser = new SendableChooser<>();
 
-  private final int CAMERA_WIDTH = 320;
+  private final int CAMERA_WIDTH = 240;
   private final int CAMERA_CENTER = CAMERA_WIDTH / 2;
-  private final int CAMERA_HEIGHT = 240;
+  private final int CAMERA_HEIGHT = 180;
 
   /**\
    * This function is run when the robot is first started up and should be
@@ -130,11 +130,11 @@ public class Robot extends TimedRobot {
     stopRobot();
 
     UsbCamera frontCamera = CameraServer.getInstance().startAutomaticCapture(0);
+    frontCamera.setFPS(8);
     frontCamera.setResolution(CAMERA_WIDTH, CAMERA_HEIGHT);
-    frontCamera.setFPS(4);
     UsbCamera rearCamera = CameraServer.getInstance().startAutomaticCapture(1);
+    rearCamera.setFPS(8);
     rearCamera.setResolution(CAMERA_WIDTH, CAMERA_HEIGHT);
-    rearCamera.setFPS(4);
     SmartDashboard.putString("Targeting", "No");
 
     /*
@@ -176,7 +176,7 @@ public class Robot extends TimedRobot {
     });
     visionThread.start();
     */
-  
+
     // Set all DoubleSolenoids to STARTING positions. FIXME before competition
     armGrabSolenoid.set(false);
     armPunchSolenoid.set(false);
@@ -188,7 +188,7 @@ public class Robot extends TimedRobot {
     chooser.setDefaultOption("Tank Drive", kTankDrive);
     chooser.addOption("Arcade Drive", kArcadeDrive);
     chooser.addOption("Cheesy Drive", kCheesyDrive);
-    SmartDashboard.putData("Drive", chooser);
+    SmartDashboard.putData("Drive Mode", chooser);
   }
 
   @Override
