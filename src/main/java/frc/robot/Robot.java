@@ -73,8 +73,6 @@ public class Robot extends TimedRobot {
   private WPI_TalonSRX rightTankMotor2Controller = new WPI_TalonSRX(kRightTankMotor2ID);
   private WPI_TalonSRX frontLiftMotor1Controller = new WPI_TalonSRX(kFrontLiftMotor1ID);
   private WPI_TalonSRX frontLiftMotor2Controller = new WPI_TalonSRX(kFrontLiftMotor2ID);
-  private WPI_TalonSRX spiderWheelMotor1Controller = new WPI_TalonSRX(kSpiderWheelMotor1ID);
-  private WPI_TalonSRX spiderWheelMotor2Controller = new WPI_TalonSRX(kSpiderWheelMotor2ID);
   private WPI_TalonSRX rearLiftMotorController = new WPI_TalonSRX(kRearLiftMotorID);
   private WPI_TalonSRX armTiltMotorController = new WPI_TalonSRX(kArmTiltMotorID);
 
@@ -82,12 +80,13 @@ public class Robot extends TimedRobot {
   private SpeedControllerGroup rightDriveGroup = new SpeedControllerGroup(rightTankMotor1Controller, rightTankMotor2Controller);
   private DifferentialDrive myDrive = new DifferentialDrive(leftDriveGroup, rightDriveGroup);
 
-  // Solenoids for pneumatics to follow...
-  private Solenoid armGrabSolenoid = new Solenoid(kPCM2ID, 0);
-  private Solenoid armPunchSolenoid = new Solenoid(kPCM2ID, 1);
+  // Solenoids for pneumatics to faollow...
+  private Solenoid armGrabSolenoid = new Solenoid(kPCM2ID, 1);
+  private Solenoid armPunchSolenoid = new Solenoid(kPCM2ID, 0);
   private Solenoid armShortTelescopeSolenoid = new Solenoid(kPCM2ID, 2);
   private DoubleSolenoid armLongTelescopeSolenoid = new DoubleSolenoid(kPCM1ID, 0, 1);
   private DoubleSolenoid armDeploySolenoid = new DoubleSolenoid(kPCM1ID, 3, 2);
+  private DoubleSolenoid brakeSolenoid = new DoubleSolenoid(kPCM1ID, 4, 5);
 
   // Misc. objects
   private final Object imgLock = new Object();
@@ -132,9 +131,11 @@ public class Robot extends TimedRobot {
     UsbCamera frontCamera = CameraServer.getInstance().startAutomaticCapture(0);
     frontCamera.setFPS(8);
     frontCamera.setResolution(CAMERA_WIDTH, CAMERA_HEIGHT);
+    /*
     UsbCamera rearCamera = CameraServer.getInstance().startAutomaticCapture(1);
     rearCamera.setFPS(8);
     rearCamera.setResolution(CAMERA_WIDTH, CAMERA_HEIGHT);
+    */
     SmartDashboard.putString("Targeting", "No");
 
     /*
@@ -183,6 +184,7 @@ public class Robot extends TimedRobot {
     armShortTelescopeSolenoid.set(false);
     armLongTelescopeSolenoid.set(Value.kReverse);
     armDeploySolenoid.set(Value.kReverse);
+    brakeSolenoid.set(Value.kReverse);
 
     // Two kinds of controls
     chooser.setDefaultOption("Tank Drive", kTankDrive);
@@ -255,14 +257,14 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
     tankDrive();
     frontLift();
-    spiderWheels();
-    rearLift();
+    //rearLift();
     //armTilt();
     //armLongTelescope();
     //armGrab();
     //armPunch();
     //armDeploy();
     //manualDeploy();
+    brake();
   }
 
   /**
@@ -295,6 +297,7 @@ public class Robot extends TimedRobot {
    */
   private void frontLift() {
     double frontLiftPower;
+    double kMaxDownPower = 1.0;
     double amt = leftOperatorStick.getRawAxis(kVerticalAxis);
     if (amt < 0.0) {
       double newAmt = smoothen(smoothen(amt));
@@ -304,7 +307,7 @@ public class Robot extends TimedRobot {
         timer.start();
       }
 
-      frontLiftPower = -1.0 * newAmt;
+      frontLiftPower = -1.0 * kMaxDownPower * newAmt;
 
       isClimbing = newIsClimbing;
       if (isClimbing && timer.get() < 0.15) {
@@ -313,33 +316,11 @@ public class Robot extends TimedRobot {
         frontLiftPower = Math.min(frontLiftPower, 0.15);
       }
     } else {
-      frontLiftPower = -1.0 * amt * 0.33;
+      frontLiftPower = -1.0 * amt * 0.4;
       isClimbing = false;
     }
     frontLiftMotor1Controller.set(frontLiftPower);
     frontLiftMotor2Controller.set(-1.0 * frontLiftPower);
-  }
-
-  /**
-   * Use left operator buttons to control spider wheels:
-   *   * bottom right top button moves forward
-   *   * bottom right bottom button moves backwards (rarely used)
-   */
-  private void spiderWheels() {
-    double kSpiderWheelsMaxPower = 0.5;
-    if (leftOperatorStick.getRawButton(2)) {
-      // spider wheels forward
-      spiderWheelMotor1Controller.set(1.0*kSpiderWheelsMaxPower);
-      spiderWheelMotor2Controller.set(1.0*kSpiderWheelsMaxPower);
-    } else if (leftOperatorStick.getRawButton(11)) {
-      // spider wheels backward
-      spiderWheelMotor1Controller.set(-1.0*kSpiderWheelsMaxPower);
-      spiderWheelMotor2Controller.set(-1.0*kSpiderWheelsMaxPower);
-    } else {
-      // else stop
-      spiderWheelMotor1Controller.set(0);
-      spiderWheelMotor2Controller.set(0);
-    }
   }
 
   /**
@@ -402,7 +383,7 @@ public class Robot extends TimedRobot {
    * Use left operator stick trigger button to punch.
    */
   private void armPunch() {
-    armPunchSolenoid.set(leftOperatorStick.getRawButton(1));
+    armPunchSolenoid.set(rightOperatorStick.getRawButton(2));
   }
 
   /**
@@ -430,6 +411,14 @@ public class Robot extends TimedRobot {
     }
   }
 
+  private void brake() {
+    if (rightOperatorStick.getRawButton(1)) {
+      brakeSolenoid.set(Value.kForward);
+    } else {
+      brakeSolenoid.set(Value.kReverse);
+    }
+  }
+
   private void stopRobot() {
     robotState = MyRobotState.DISABLED;
 
@@ -439,8 +428,6 @@ public class Robot extends TimedRobot {
     rightTankMotor2Controller.set(0.0);
     frontLiftMotor1Controller.set(0.0);
     frontLiftMotor2Controller.set(0.0);
-    spiderWheelMotor1Controller.set(0.0);
-    spiderWheelMotor2Controller.set(0.0);
     rearLiftMotorController.set(0.0);
     armTiltMotorController.set(0.0);
 
