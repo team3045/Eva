@@ -53,8 +53,8 @@ public class Robot extends TimedRobot {
   private final int kVerticalAxis = 1;
 
   // Talon CAN bus ids
-  private final int kLeftTankMotor1ID = 10;
-  private final int kLeftTankMotor2ID = 11;
+  private final int kLeftTankMotor1ID = 25;
+  private final int kLeftTankMotor2ID = 26;
   private final int kRightTankMotor1ID = 12;
   private final int kRightTankMotor2ID = 13;
   private final int kFrontLiftMotor1ID = 14;
